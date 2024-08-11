@@ -9,7 +9,7 @@ pub struct Parser<'long> {
     current: usize,
 }
 
-impl<'long, 'short> Parser<'long> {
+impl<'long> Parser<'long> {
     fn new(tokens: &'long [Token]) -> Self {
         Self { tokens, current: 0 }
     }
@@ -22,11 +22,11 @@ impl<'long, 'short> Parser<'long> {
         self.peek().token == Eof
     }
 
-    fn previous(&'short self) -> Token<'long> {
+    fn previous(&self) -> Token<'long> {
         self.tokens[self.current - 1]
     }
 
-    fn peek(&'short self) -> Token<'long> {
+    fn peek(&self) -> Token<'long> {
         self.tokens[self.current]
     }
 
@@ -46,7 +46,7 @@ impl<'long, 'short> Parser<'long> {
         }
     }
 
-    fn token_match(&'short mut self, types: &'static [TokenType]) -> bool {
+    fn token_match(&mut self, types: &'static [TokenType]) -> bool {
         for token_type in types {
             if self.check(*token_type) {
                 self.advance();
@@ -56,12 +56,12 @@ impl<'long, 'short> Parser<'long> {
         false
     }
 
-    fn expression(&'short mut self) -> Expr<'long> {
+    fn expression(&mut self) -> Expr<'long> {
         self.equality()
     }
 
     fn bin_op(
-        &'short mut self,
+        &mut self,
         token_types: &'static [TokenType],
         mut next_op: impl FnMut(&mut Self) -> Expr<'long>,
     ) -> Expr<'long> {
@@ -79,23 +79,23 @@ impl<'long, 'short> Parser<'long> {
         expr
     }
 
-    fn equality(&'short mut self) -> Expr<'long> {
+    fn equality(&mut self) -> Expr<'long> {
         self.bin_op(&[BangEqual, EqualEqual], |s| s.comparison())
     }
 
-    fn comparison(&'short mut self) -> Expr<'long> {
+    fn comparison(&mut self) -> Expr<'long> {
         self.bin_op(&[Greater, GreaterEqual, Less, LessEqual], |s| s.term())
     }
 
-    fn term(&'short mut self) -> Expr<'long> {
+    fn term(&mut self) -> Expr<'long> {
         self.bin_op(&[Plus, Minus], |s| s.factor())
     }
 
-    fn factor(&'short mut self) -> Expr<'long> {
+    fn factor(&mut self) -> Expr<'long> {
         self.bin_op(&[Star, Slash], |s| s.unary())
     }
 
-    fn unary(&'short mut self) -> Expr<'long> {
+    fn unary(&mut self) -> Expr<'long> {
         if self.token_match(&[Bang, Minus]) {
             let operator = self.previous();
             let right = Box::new(self.unary());
@@ -105,7 +105,7 @@ impl<'long, 'short> Parser<'long> {
         }
     }
 
-    fn primary(&'short mut self) -> Expr<'long> {
+    fn primary(&mut self) -> Expr<'long> {
         if self.is_at_end() {
             panic!("I shouldn't be at the end")
         }
