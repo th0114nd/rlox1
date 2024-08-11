@@ -1,0 +1,2 @@
+var language = "lox";
+var pi = 3.1419;

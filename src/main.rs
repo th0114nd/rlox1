@@ -7,6 +7,7 @@ use std::io::Write;
 use std::io::{self, Read};
 use std::sync::Mutex;
 
+mod expr;
 mod scanner;
 mod token;
 
