@@ -8,6 +8,7 @@ use std::io::{self, Read};
 use std::sync::Mutex;
 
 mod expr;
+mod parser;
 mod scanner;
 mod token;
 

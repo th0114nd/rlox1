@@ -2,18 +2,18 @@ use crate::token::Token;
 use std::fmt;
 
 // What can we do with an expr?
-enum Expr<'a> {
-    Binary {
-        left: Box<Expr<'a>>,
-        operator: Token<'a>,
-        right: Box<Expr<'a>>,
-    },
+pub enum Expr<'a> {
+    Literal(Token<'a>),
     Grouping(Box<Expr<'a>>),
     // TODO: this should be larger than just tokens, maybe it should include class literals as
     // well?
     // can we do less broad than Box<dyn Any>?
-    Literal(Token<'a>),
     Unary {
+        operator: Token<'a>,
+        right: Box<Expr<'a>>,
+    },
+    Binary {
+        left: Box<Expr<'a>>,
         operator: Token<'a>,
         right: Box<Expr<'a>>,
     },
