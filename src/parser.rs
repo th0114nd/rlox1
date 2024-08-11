@@ -1,33 +1,24 @@
-use crate::error;
 use crate::error::LoxError;
+use crate::error::LoxResult;
 use crate::expr::Expr;
 use crate::token::Token;
 use crate::token::TokenType;
 use crate::token::TokenType::*;
-use thiserror::Error;
+
+type ResultExpr<'a> = LoxResult<Expr<'a>>;
 
 pub struct Parser<'long> {
     tokens: &'long [Token<'long>],
     current: usize,
 }
 
-//#[derive(Debug, Error)]
-//#[error("parser error")]
-//struct ParseError {}
-//
-//impl ParseError {
-//    fn new(token: Token, msg: impl AsRef<str>) -> Self {
-//        error(token, msg);
-//        ParseError {}
-//    }
-//}
-
-type ParseResult<T> = Result<T, LoxError>;
-type ResultExpr<'a> = ParseResult<Expr<'a>>;
-
 impl<'long> Parser<'long> {
-    fn new(tokens: &'long [Token]) -> Self {
+    pub fn new(tokens: &'long [Token]) -> Self {
         Self { tokens, current: 0 }
+    }
+
+    pub fn parse() -> LoxResult<Expr> {
+        self.expression()
     }
 
     fn advance(&mut self) {
@@ -46,7 +37,7 @@ impl<'long> Parser<'long> {
         self.tokens[self.current]
     }
 
-    fn consume(&mut self, token_type: TokenType, err_msg: &str) -> ParseResult<()> {
+    fn consume(&mut self, token_type: TokenType, err_msg: &str) -> LoxResult<()> {
         let token = self.tokens[self.current];
         if token.token != token_type {
             return Err(LoxError::from((token, err_msg)));
@@ -73,7 +64,7 @@ impl<'long> Parser<'long> {
         false
     }
 
-    fn expression(&mut self) -> ParseResult<Expr<'long>> {
+    fn expression(&mut self) -> ResultExpr<'long> {
         self.equality()
     }
 
@@ -145,6 +136,19 @@ impl<'long> Parser<'long> {
             _ => panic!("unreachable arm {cur_token}"),
         }
     }
+
+    fn synchronize(&mut self) {
+        self.advance();
+        while !self.is_at_end() {
+            if self.previous().token == Semicolon {
+                return;
+            }
+            match self.peek().token {
+                Class | Fun | Var | For | If | While | Print | Return => return,
+                _ => self.advance(),
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -166,7 +170,7 @@ mod tests {
         let mut scanner = Scanner::new(input);
         let tokens = scanner.scan_tokens()?;
         let mut parser = Parser::new(&tokens);
-        let expr = parser.expression().expect("should have been able to parse");
+        let expr = parser.expression()?;
         let got = format!("{}", expr);
         assert_eq!(got, want);
         Ok(())

@@ -11,101 +11,54 @@ mod parser;
 mod scanner;
 mod token;
 
+use crate::error::LoxError;
+use crate::error::LoxResult;
+use crate::parser::Parser;
 use crate::scanner::Scanner;
-//use crate::token::Token;
-//use crate::token::TokenType;
 
-//lazy_static! {
-//    static ref HAS_FAILURE: Mutex<bool> = Mutex::new(false);
-//}
-
-//trait Reportable {
-//    fn rep(self) -> String;
-//}
-//
-//impl Reportable for usize {
-//    fn line(self) -> String {
-//        format!("[line {line}] Error:")
-//    }
-//}
-//
-//impl<'a> Reportable for Token<'a> {
-//    fn rep(self) -> String {
-//        let r#where = if self.token == TokenType::Eof {
-//            "at end".to_owned()
-//        } else {
-//            format!("at '{}'", self.lexeme)
-//        };
-//        let line = self.line;
-//        format!("[line {line}] Error {where}: ")
-//    }
-//}
-
-//fn report(line: usize, r#where: impl AsRef<str>, msg: impl AsRef<str>) {
-//    println!("[line {line}] Error{}: {}", r#where.as_ref(), msg.as_ref());
-//    set_error();
-//}
-//
-//fn set_error() {
-//    *HAS_FAILURE.lock().unwrap() = true;
-//}
-//
-//fn reset_error() {
-//    *HAS_FAILURE.lock().unwrap() = false;
-//}
-
-//fn error(token: Token, msg: impl AsRef<str>) {
-//    if token.token == TokenType::Eof {
-//        report(token.line, " at end", msg);
-//    } else {
-//        report(token.line, " at '".to_owned() + token.lexeme + "'", msg);
-//    }
-//}
-
-//fn run(src: String) -> Result<(), Error> {}
-fn run(src: &str) -> Result<(), error::LoxError> {
+fn run(src: &str) -> LoxResult<()> {
     let mut scanner = Scanner::new(src);
     let maybe_tokens = scanner.scan_tokens();
     if let Err(errs) = maybe_tokens {
         for err in &errs {
             eprintln!("{err}");
         }
-        return Err(error::LoxError::from(errs));
+        return Err(LoxError::from(errs));
     }
     let tokens = maybe_tokens.unwrap();
-    for token in tokens {
-        println!("{token}");
+
+    let mut parser = Parser::new(&tokens);
+    let expr = parser.parse();
+    match expr {
+        Err(err) => eprintln!("{err}"),
+        Ok(expr) => println!("{expr}"),
     }
     Ok(())
 }
 
-fn run_prompt() -> Result<(), error::LoxError> {
+fn run_prompt() -> LoxResult<()> {
     let mut input = String::new();
     loop {
         input.clear();
         print!("> ");
         io::stdout().flush()?;
-        stdin()
-            .lock()
-            .read_line(&mut input)
-            .expect("failed to read line");
+        stdin().lock().read_line(&mut input)?;
         if input.is_empty() {
             return Ok(());
         }
         // TODO: log?
         let _ = run(&input);
-        //error::reset_error();
     }
 }
 
-fn run_file(file_name: &str) -> Result<(), error::LoxError> {
+fn run_file(file_name: &str) -> LoxResult<()> {
     let mut file = File::open(file_name)?;
     let mut contents = String::new();
     file.read_to_string(&mut contents)?;
     run(&contents)
 }
 
-fn main() -> Result<(), error::LoxError> {
+fn main() -> LoxResult<()> {
     let args: Vec<String> = std::env::args().collect();
     match args.len() {
         1 => run_prompt(),

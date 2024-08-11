@@ -1,28 +1,11 @@
 use crate::token::Token;
 use crate::token::TokenType;
-use lazy_static::lazy_static;
 use std::fmt::Display;
 use std::fmt::Write;
 use std::io;
-use std::sync::Mutex;
 use thiserror::Error;
 
-lazy_static! {
-    static ref HAS_FAILURE: Mutex<bool> = Mutex::new(false);
-}
-
-fn report(line: usize, r#where: impl AsRef<str>, msg: impl AsRef<str>) {
-    println!("[line {line}] Error{}: {}", r#where.as_ref(), msg.as_ref());
-    set_error();
-}
-
-pub fn set_error() {
-    *HAS_FAILURE.lock().unwrap() = true;
-}
-
-pub fn reset_error() {
-    *HAS_FAILURE.lock().unwrap() = false;
-}
+pub type LoxResult<T> = Result<T, LoxError>;
 
 #[derive(Debug, Error)]
 pub enum LoxError {

@@ -258,13 +258,24 @@ vec![ "(", "!=", "!", "{", "-", ")", "+", "==", "}", "=", ";", "/", ">", ">=", "
         #[case] input: &str,
         #[case] want_types: Vec<TokenType>,
         #[case] want_lexemes: Vec<&str>,
-    ) {
+    ) -> Result<(), LoxError> {
         let mut scanner = Scanner::new(input);
-        let tokens = scanner.scan_tokens().expect("should have been scanned");
+        let tokens = scanner.scan_tokens()?;
 
         let got_types: Vec<_> = tokens.iter().map(|token| token.token).collect();
         let got_lexemes: Vec<_> = tokens.iter().map(|token| token.lexeme).collect();
         assert_eq!(got_types, want_types);
         assert_eq!(got_lexemes, want_lexemes);
+    }
+
+    #[test]
+    fn test_scan_types_error() {
+        let mut scanner = Scanner::new("var x = \"interrupted string ends here");
+        let result = scanner.scan_tokens();
+        assert!(result.is_err());
+
+        let mut scanner = Scanner::new("#nofilter");
+        let result = scanner.scan_tokens();
+        assert!(result.is_err());
     }
 }
