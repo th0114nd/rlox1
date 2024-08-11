@@ -1,4 +1,5 @@
 use crate::error;
+use crate::error::LoxError;
 use crate::token::Token;
 use crate::token::TokenType;
 use crate::token::TokenType::*;
@@ -36,6 +37,7 @@ pub struct Scanner<'a> {
     src: &'a str,
     chars: Peekable<CharIndices<'a>>,
     tokens: Vec<Token<'a>>,
+    errors: Vec<LoxError>,
 
     start: usize,
     current: usize,
@@ -48,13 +50,14 @@ impl<'a> Scanner<'a> {
             src,
             chars: src.char_indices().peekable(),
             tokens: vec![],
+            errors: vec![],
             start: 0,
             current: 0,
             line: 1,
         }
     }
 
-    pub fn scan_tokens(&mut self) -> Vec<Token<'a>> {
+    pub fn scan_tokens(&mut self) -> Result<Vec<Token<'a>>, Vec<LoxError>> {
         while let Some((start, c)) = self.chars.peek() {
             self.start = *start;
             let c = *c;
@@ -66,7 +69,11 @@ impl<'a> Scanner<'a> {
             lexeme: "",
             line: self.line,
         });
-        mem::take(&mut self.tokens)
+        if self.errors.is_empty() {
+            Ok(mem::take(&mut self.tokens))
+        } else {
+            Err(mem::take(&mut self.errors))
+        }
     }
 
     fn buffered_str(&self) -> &'a str {
@@ -129,7 +136,7 @@ impl<'a> Scanner<'a> {
             '"' => self.string(),
             d if d.is_ascii_digit() => self.number(),
             d if d.is_ascii_alphabetic() || d == '_' => self.identifier(),
-            _ => error(self.line, format!("Unexpected character: {c}")),
+            _ => self.add_error(format!("Unexpected character: {c}")),
         }
     }
 
@@ -155,6 +162,10 @@ impl<'a> Scanner<'a> {
         })
     }
 
+    fn add_error(&mut self, msg: std::string::String) {
+        self.errors.push(LoxError::ScanError(self.line, msg))
+    }
+
     fn peek(&mut self) -> char {
         match self.chars.peek() {
             None => '\0',
@@ -175,7 +186,7 @@ impl<'a> Scanner<'a> {
             self.advance();
         }
         if self.is_at_end() {
-            error(self.line, "Unterminated string.");
+            self.add_error("Unterminated string.".to_owned());
             return;
         }
         self.advance();
@@ -249,7 +260,7 @@ vec![ "(", "!=", "!", "{", "-", ")", "+", "==", "}", "=", ";", "/", ">", ">=", "
         #[case] want_lexemes: Vec<&str>,
     ) {
         let mut scanner = Scanner::new(input);
-        let tokens = scanner.scan_tokens();
+        let tokens = scanner.scan_tokens().expect("should have been scanned");
 
         let got_types: Vec<_> = tokens.iter().map(|token| token.token).collect();
         let got_lexemes: Vec<_> = tokens.iter().map(|token| token.lexeme).collect();
