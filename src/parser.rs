@@ -63,13 +63,8 @@ impl<'long, 'short> Parser<'long> {
     fn bin_op(
         &'short mut self,
         token_types: &'static [TokenType],
-        next_op: impl Fn(&mut Self) -> Expr<'long>,
-        //next_op: F,
-    ) -> Expr<'long>
-//where
-    //    F: Fn(&mut Self) -> Expr<'long>, //where
-                                         //'long: 'short,
-    {
+        mut next_op: impl FnMut(&mut Self) -> Expr<'long>,
+    ) -> Expr<'long> {
         let mut expr = next_op(self);
 
         while self.token_match(token_types) {
@@ -85,63 +80,19 @@ impl<'long, 'short> Parser<'long> {
     }
 
     fn equality(&'short mut self) -> Expr<'long> {
-        let mut expr = self.comparison();
-
-        while self.token_match(&[BangEqual, EqualEqual]) {
-            let operator = self.previous();
-            let right = Box::new(self.comparison());
-            expr = Expr::Binary {
-                left: Box::new(expr),
-                operator,
-                right,
-            };
-        }
-        expr
+        self.bin_op(&[BangEqual, EqualEqual], |s| s.comparison())
     }
 
     fn comparison(&'short mut self) -> Expr<'long> {
-        let mut expr = self.term();
-
-        while self.token_match(&[Greater, GreaterEqual, Less, LessEqual]) {
-            let operator = self.previous();
-            let right = Box::new(self.term());
-            expr = Expr::Binary {
-                left: Box::new(expr),
-                operator,
-                right,
-            }
-        }
-        expr
+        self.bin_op(&[Greater, GreaterEqual, Less, LessEqual], |s| s.term())
     }
 
     fn term(&'short mut self) -> Expr<'long> {
-        let mut expr = self.factor();
-
-        while self.token_match(&[Plus, Minus]) {
-            let operator = self.previous();
-            let right = Box::new(self.factor());
-            expr = Expr::Binary {
-                left: Box::new(expr),
-                operator,
-                right,
-            }
-        }
-        expr
+        self.bin_op(&[Plus, Minus], |s| s.factor())
     }
 
     fn factor(&'short mut self) -> Expr<'long> {
-        let mut expr = self.unary();
-
-        while self.token_match(&[Star, Slash]) {
-            let operator = self.previous();
-            let right = Box::new(self.unary());
-            expr = Expr::Binary {
-                left: Box::new(expr),
-                operator,
-                right,
-            }
-        }
-        expr
+        self.bin_op(&[Star, Slash], |s| s.unary())
     }
 
     fn unary(&'short mut self) -> Expr<'long> {
