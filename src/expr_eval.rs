@@ -60,6 +60,7 @@ mod tests {
     #[case("!4", Bool(false))]
     #[case("!nil", Bool(true))]
     #[case("0 - -7", VNumber(7.0))]
+    #[case(r#""lox" == "lo" + "x""#, Bool(true))]
     fn test_eval(#[case] input: &str, #[case] want: Value) -> LoxResult<()> {
         let mut scanner = crate::scanner::Scanner::new(input);
         let tokens = scanner.scan_tokens()?;
