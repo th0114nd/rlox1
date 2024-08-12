@@ -6,9 +6,6 @@ use std::fmt;
 pub enum Expr<'a> {
     Literal(value::Value),
     Grouping(Box<Expr<'a>>),
-    // TODO: this should be larger than just tokens, maybe it should include class literals as
-    // well?
-    // can we do less broad than Box<dyn Any>?
     Unary {
         operator: Token<'a>,
         right: Box<Expr<'a>>,
@@ -43,16 +40,16 @@ mod tests {
 
     #[rstest::rstest]
     //#[case(Literal(Token{token: TokenType::Star, lexeme:"*", line: 1}), "*")]
-    #[case(Literal(value::Value::Nil), "nil")]
+    #[case(Literal(value::Value::VNil), "nil")]
     #[case(Binary{
         left: Box::new(
             Unary{
                 operator: Token{token: TokenType::Minus, lexeme: "-", line: 1},
-                right: Box::new(Literal(value::Value::Number(123.0))),
+                right: Box::new(Literal(value::Value::VNumber(123.0))),
             },
         ),
         operator: Token{token: TokenType::Star, lexeme: "*", line: 1},
-        right: Box::new(Grouping(Box::new(Literal(value::Value::Number(45.67))))),
+        right: Box::new(Grouping(Box::new(Literal(value::Value::VNumber(45.67))))),
     }, "(* (- 123) (group 45.67))")]
     fn test_display(#[case] expr: Expr, #[case] want: &str) {
         let got = format!("{}", expr);

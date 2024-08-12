@@ -28,8 +28,8 @@ pub enum TokenType<'a> {
 
     // Literals
     Identifier,
-    String(&'a str),
-    Number(f64),
+    TString(&'a str),
+    TNumber(f64),
 
     // Keywords
     And,

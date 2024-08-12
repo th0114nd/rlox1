@@ -122,7 +122,7 @@ impl<'long> Parser<'long> {
         }
         let cur_token = self.peek();
         match cur_token.token {
-            False | True | Nil | Number(_) | String(_) => {
+            False | True | Nil | TNumber(_) | TString(_) => {
                 let expr = Expr::Literal(cur_token.token.into());
                 self.advance();
                 Ok(expr)

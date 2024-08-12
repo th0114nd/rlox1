@@ -1,10 +1,10 @@
 use crate::expr::Expr;
 use crate::token::TokenType::*;
-use crate::value::TypeMismatch;
 use crate::value::Value;
+use crate::value::ValueError;
 
 impl<'a> Expr<'a> {
-    fn eval(&self) -> Result<Value, TypeMismatch> {
+    fn eval(&self) -> Result<Value, ValueError> {
         match self {
             Expr::Literal(value) => Ok(value.clone()),
             Expr::Grouping(expr) => expr.eval(),
@@ -38,5 +38,28 @@ impl<'a> Expr<'a> {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::error::LoxResult;
+    use Value::*;
+
+    #[rstest::rstest]
+    #[case("nil", VNil)]
+    #[case("true", Bool(true))]
+    #[case("false", Bool(false))]
+    #[case("3.14", VNumber(3.14))]
+    #[case("  \" a string \" ", VString(" a string ".to_owned()))]
+    fn test_eval(#[case] input: &str, #[case] want: Value) -> LoxResult<()> {
+        let mut scanner = crate::scanner::Scanner::new(input);
+        let tokens = scanner.scan_tokens()?;
+        let mut parser = crate::parser::Parser::new(&tokens);
+        let expr = parser.parse()?;
+        let got = expr.eval()?;
+        assert_eq!(got, want);
+        Ok(())
     }
 }

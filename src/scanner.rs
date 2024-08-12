@@ -190,7 +190,7 @@ impl<'a> Scanner<'a> {
         }
         self.advance();
         let value = self.buffered_str();
-        self.add_token(String(&value[1..value.len() - 1]));
+        self.add_token(TString(&value[1..value.len() - 1]));
     }
 
     fn number(&mut self) {
@@ -208,7 +208,7 @@ impl<'a> Scanner<'a> {
             .buffered_str()
             .parse()
             .expect("this is already a number");
-        self.add_token(Number(num));
+        self.add_token(TNumber(num));
     }
 
     fn identifier(&mut self) {
@@ -230,7 +230,7 @@ mod tests {
     #[rstest::rstest]
     #[case(
         "var language = \"lox\";\nvar pi = 3.14159;",
-        vec![Var, Identifier, Equal, String("lox"), Semicolon, Var, Identifier, Equal, Number(3.14159), Semicolon, Eof],
+        vec![Var, Identifier, Equal, TString("lox"), Semicolon, Var, Identifier, Equal, TNumber(3.14159), Semicolon, Eof],
         vec!["var", "language", "=", "\"lox\"", ";", "var", "pi", "=", "3.14159", ";", ""],
     )]
     #[case(
@@ -250,7 +250,7 @@ vec![ "(", "!=", "!", "{", "-", ")", "+", "==", "}", "=", ";", "/", ">", ">=", "
         "or", "print", "return", "super", "this", "true", "var", "while", "",
     ])]
     #[case("  var \t  x   = // a comment doesn't stop this\n 1894",
-        vec![Var, Identifier, Equal, Number(1894.0), Eof],
+        vec![Var, Identifier, Equal, TNumber(1894.0), Eof],
         vec!["var", "x", "=", "1894", ""],
     )]
     fn test_scan_types(
