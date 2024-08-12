@@ -1,5 +1,3 @@
-use crate::error::LoxError;
-use crate::error::LoxResult;
 use crate::expr::Expr;
 use crate::token::TokenType::*;
 use crate::value::TypeMismatch;

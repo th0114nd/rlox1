@@ -1,4 +1,3 @@
-use crate::error;
 use crate::error::LoxError;
 use crate::token::Token;
 use crate::token::TokenType;
