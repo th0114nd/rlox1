@@ -53,6 +53,8 @@ mod tests {
     #[case("false", Bool(false))]
     #[case("3.14", VNumber(3.14))]
     #[case("  \" a string \" ", VString(" a string ".to_owned()))]
+    #[case("2 + 4 + 5 * 3", VNumber(21.0))]
+    #[case("\"foo\" + \"bar\"", VString("foobar"))]
     fn test_eval(#[case] input: &str, #[case] want: Value) -> LoxResult<()> {
         let mut scanner = crate::scanner::Scanner::new(input);
         let tokens = scanner.scan_tokens()?;
