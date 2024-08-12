@@ -266,6 +266,7 @@ vec![ "(", "!=", "!", "{", "-", ")", "+", "==", "}", "=", ";", "/", ">", ">=", "
         let got_lexemes: Vec<_> = tokens.iter().map(|token| token.lexeme).collect();
         assert_eq!(got_types, want_types);
         assert_eq!(got_lexemes, want_lexemes);
+        Ok(())
     }
 
     #[test]

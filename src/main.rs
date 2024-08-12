@@ -7,9 +7,11 @@ use std::io::{self, Read};
 
 mod error;
 mod expr;
+mod expr_eval;
 mod parser;
 mod scanner;
 mod token;
+mod value;
 
 use crate::error::LoxError;
 use crate::error::LoxResult;

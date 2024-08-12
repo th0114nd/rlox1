@@ -17,7 +17,7 @@ impl<'long> Parser<'long> {
         Self { tokens, current: 0 }
     }
 
-    pub fn parse() -> LoxResult<Expr> {
+    pub fn parse(&mut self) -> LoxResult<Expr> {
         self.expression()
     }
 
@@ -123,7 +123,7 @@ impl<'long> Parser<'long> {
         let cur_token = self.peek();
         match cur_token.token {
             False | True | Nil | Number(_) | String(_) => {
-                let expr = Expr::Literal(cur_token);
+                let expr = Expr::Literal(cur_token.token.into());
                 self.advance();
                 Ok(expr)
             }
