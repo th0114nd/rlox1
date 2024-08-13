@@ -7,8 +7,8 @@ use crate::token::TokenType;
 
 #[derive(Debug, Error)]
 pub enum ValueError {
-    #[error("type mismatch")]
-    TypeMismatch,
+    #[error("type mismatch: {0} vs {1}")]
+    TypeMismatch(Value, Value),
     #[error("zero division error")]
     ZeroDivError,
 }
@@ -47,7 +47,7 @@ impl TryFrom<Value> for f64 {
         if let VNumber(x) = value {
             Ok(x)
         } else {
-            Err(ValueError::TypeMismatch {})
+            Err(ValueError::TypeMismatch(value, VNumber(1197.9)))
         }
     }
 }
@@ -69,10 +69,11 @@ impl std::ops::Add for Value {
     type Output = OpOutput;
 
     fn add(self, other: Value) -> Self::Output {
-        match (self, other) {
+        // TODO: I feel like this shouldn't need to to_owned in the happy path
+        match (&self, &other) {
             (VNumber(lhs), VNumber(rhs)) => Ok(VNumber(lhs + rhs)),
-            (VString(lhs), VString(rhs)) => Ok(VString(lhs + &rhs)),
-            _ => Err(ValueError::TypeMismatch {}),
+            (VString(lhs), VString(rhs)) => Ok(VString(lhs.to_owned() + rhs)),
+            _ => Err(ValueError::TypeMismatch(self, other)),
         }
     }
 }

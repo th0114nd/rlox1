@@ -32,7 +32,10 @@ fn run(src: &str) -> LoxResult<()> {
     let stmts = parser.parse();
     match stmts {
         Err(err) => eprintln!("{err}"),
-        Ok(stmts) => stmts.iter().try_for_each(|s| s.eval(io::stdout()))?,
+        Ok(stmts) => stmts
+            .iter()
+            .enumerate()
+            .try_for_each(|(current, s)| s.eval(current, io::stdout()))?,
     }
     Ok(())
 }

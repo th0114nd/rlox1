@@ -1,16 +1,17 @@
+use crate::error::LoxError;
 use crate::stmt::Stmt;
 use crate::value::ValueError;
 use std::io;
 
 impl<'a> Stmt<'a> {
-    pub fn eval(&self, mut w: impl io::Write) -> Result<(), ValueError> {
+    pub fn eval(&self, current: usize, mut w: impl io::Write) -> Result<(), LoxError> {
         match self {
             Stmt::Expr(expr) => {
-                expr.eval()?;
+                expr.eval(current)?;
                 Ok(())
             }
             Stmt::Print(expr) => {
-                let v = expr.eval()?;
+                let v = expr.eval(current)?;
                 writeln!(w, "{v}").expect("writes should not fail");
                 Ok(())
             }
@@ -44,8 +45,9 @@ mod tests {
 
         let got: Vec<()> = stmts
             .into_iter()
-            .map(|ref s| s.eval(&mut buf))
-            .collect::<Result<Vec<()>, ValueError>>()?;
+            .enumerate()
+            .map(|(current, ref s)| s.eval(current, &mut buf))
+            .collect::<Result<Vec<()>, LoxError>>()?;
         assert_eq!(got, want);
 
         assert_eq!(std::str::from_utf8(&buf), Ok(want_stdout));

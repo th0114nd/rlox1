@@ -26,8 +26,8 @@ pub enum LoxError {
     #[error("{}", join_all(.0))]
     MultiError(Vec<LoxError>),
 
-    #[error("value error: {0}")]
-    ValueError(#[from] value::ValueError),
+    #[error("[line {0}] Error: value error: {1}")]
+    ValueError(usize, value::ValueError),
 }
 
 fn join_all<T: Display>(items: &[T]) -> String {
