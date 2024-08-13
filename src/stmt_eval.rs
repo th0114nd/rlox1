@@ -22,6 +22,8 @@ impl<'a> Stmt<'a> {
 mod tests {
     use super::*;
     use crate::error::LoxResult;
+    use crate::parser::Parser;
+    use crate::scanner::Scanner;
 
     #[rstest::rstest]
     #[case("nil;", vec![()], "")]
@@ -35,9 +37,9 @@ mod tests {
         #[case] want: Vec<()>,
         #[case] want_stdout: &'static str,
     ) -> LoxResult<()> {
-        let mut scanner = crate::scanner::Scanner::new(input);
+        let mut scanner = Scanner::new(input);
         let tokens = scanner.scan_tokens()?;
-        let mut parser = crate::parser::Parser::new(&tokens);
+        let mut parser = Parser::new(&tokens);
         let stmts = parser.parse()?;
 
         let mut buf = vec![];
@@ -48,6 +50,37 @@ mod tests {
             .map(|(current, ref s)| s.eval(current, &mut buf))
             .collect::<Result<Vec<()>, LoxError>>()?;
         assert_eq!(got, want);
+
+        assert_eq!(std::str::from_utf8(&buf), Ok(want_stdout));
+        Ok(())
+    }
+
+    #[rstest::rstest]
+    #[case(
+        "print nil;\n 4 + \"lox\";\n 2 + \"oops\";",
+        "[line 2] Error: value error: type mismatch: 4 vs lox",
+        "nil\n"
+    )]
+    fn test_eval_error(
+        #[case] input: &str,
+        #[case] want: &str,
+        #[case] want_stdout: &str,
+    ) -> LoxResult<()> {
+        let mut scanner = Scanner::new(input);
+        let tokens = scanner.scan_tokens()?;
+        let mut parser = Parser::new(&tokens);
+        let stmts = parser.parse()?;
+
+        let mut buf = vec![];
+
+        let got = stmts
+            .into_iter()
+            .enumerate()
+            .map(|(current, ref s)| s.eval(current + 1, &mut buf))
+            .collect::<Result<Vec<()>, LoxError>>()
+            .expect_err("should have created an error");
+
+        assert_eq!(format!("{got}"), want);
 
         assert_eq!(std::str::from_utf8(&buf), Ok(want_stdout));
         Ok(())
