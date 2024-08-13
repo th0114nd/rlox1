@@ -19,6 +19,7 @@ use crate::error::LoxError;
 use crate::error::LoxResult;
 use crate::parser::Parser;
 use crate::scanner::Scanner;
+use crate::value::ValueError;
 
 fn run(src: &str) -> LoxResult<()> {
     let mut scanner = Scanner::new(src);
@@ -35,7 +36,7 @@ fn run(src: &str) -> LoxResult<()> {
     let stmts = parser.parse();
     match stmts {
         Err(err) => eprintln!("{err}"),
-        Ok(stmts) => stmts.iter().map(|s| println!("{s}")).collect(),
+        Ok(stmts) => stmts.iter().try_for_each(|s| s.eval(io::stdout()))?,
     }
     Ok(())
 }

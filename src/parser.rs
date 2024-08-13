@@ -43,15 +43,19 @@ impl<'long> Parser<'long> {
     }
 
     fn is_at_end(&self) -> bool {
-        self.peek().token == Eof
+        self.peek() == Eof
     }
 
     fn previous(&self) -> Token<'long> {
         self.tokens[self.current - 1]
     }
 
-    fn peek(&self) -> Token<'long> {
-        self.tokens[self.current]
+    fn peek(&self) -> TokenType {
+        if self.current >= self.tokens.len() {
+            Eof
+        } else {
+            self.tokens[self.current].token
+        }
     }
 
     fn consume(&mut self, token_type: TokenType, err_msg: &str) -> LoxResult<()> {
@@ -67,7 +71,7 @@ impl<'long> Parser<'long> {
         if self.is_at_end() {
             false
         } else {
-            self.peek().token == token_type
+            self.peek() == token_type
         }
     }
 
@@ -158,9 +162,9 @@ impl<'long> Parser<'long> {
             return Err(LoxError::UnexpectedEof);
         }
         let cur_token = self.peek();
-        match cur_token.token {
+        match cur_token {
             False | True | Nil | TNumber(_) | TString(_) => {
-                let expr = Expr::Literal(cur_token.token.into());
+                let expr = Expr::Literal(cur_token.into());
                 self.advance();
                 Ok(expr)
             }
@@ -170,7 +174,7 @@ impl<'long> Parser<'long> {
                 self.consume(RightParen, "Expect ')' after expression")?;
                 Ok(Expr::Grouping(Box::new(expr)))
             }
-            _ => panic!("unreachable arm {cur_token}"),
+            _ => panic!("unreachable arm {cur_token:?}"),
         }
     }
 
@@ -180,7 +184,7 @@ impl<'long> Parser<'long> {
             if self.previous().token == Semicolon {
                 return;
             }
-            match self.peek().token {
+            match self.peek() {
                 Class | Fun | Var | For | If | While | Print | Return => return,
                 _ => self.advance(),
             }
