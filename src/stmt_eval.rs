@@ -1,6 +1,17 @@
 use crate::error::LoxError;
 use crate::stmt::Stmt;
+use crate::stmt::StmtList;
 use std::io;
+
+impl<'a> StmtList<'a> {
+    pub fn eval(self, mut w: impl io::Write) -> Result<Vec<()>, LoxError> {
+        self.0
+            .into_iter()
+            .enumerate()
+            .map(|(current, ref s)| s.eval(current + 1, &mut w))
+            .collect::<Result<Vec<()>, LoxError>>()
+    }
+}
 
 impl<'a> Stmt<'a> {
     pub fn eval(&self, current: usize, mut w: impl io::Write) -> Result<(), LoxError> {
@@ -44,11 +55,11 @@ mod tests {
 
         let mut buf = vec![];
 
-        let got: Vec<()> = stmts
-            .into_iter()
-            .enumerate()
-            .map(|(current, ref s)| s.eval(current, &mut buf))
-            .collect::<Result<Vec<()>, LoxError>>()?;
+        let got: Vec<()> = stmts.eval(&mut buf)?;
+        //.into_iter()
+        //.enumerate()
+        //.map(|(current, ref s)| s.eval(current, &mut buf))
+        //.collect::<Result<Vec<()>, LoxError>>()?;
         assert_eq!(got, want);
 
         assert_eq!(std::str::from_utf8(&buf), Ok(want_stdout));
@@ -74,10 +85,7 @@ mod tests {
         let mut buf = vec![];
 
         let got = stmts
-            .into_iter()
-            .enumerate()
-            .map(|(current, ref s)| s.eval(current + 1, &mut buf))
-            .collect::<Result<Vec<()>, LoxError>>()
+            .eval(&mut buf)
             .expect_err("should have created an error");
 
         assert_eq!(format!("{got}"), want);

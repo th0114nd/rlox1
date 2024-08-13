@@ -2,6 +2,7 @@ use crate::error::LoxError;
 use crate::error::LoxResult;
 use crate::expr::Expr;
 use crate::stmt::Stmt;
+use crate::stmt::StmtList;
 use crate::token::Token;
 use crate::token::TokenType;
 use crate::token::TokenType::*;
@@ -19,7 +20,7 @@ impl<'long> Parser<'long> {
         Self { tokens, current: 0 }
     }
 
-    pub fn parse(&mut self) -> LoxResult<Vec<Stmt>> {
+    pub fn parse(&mut self) -> LoxResult<StmtList> {
         let mut statements = vec![];
         let mut errors = vec![];
         while !self.is_at_end() {
@@ -34,7 +35,7 @@ impl<'long> Parser<'long> {
         if !errors.is_empty() {
             Err(LoxError::MultiError(errors))
         } else {
-            Ok(statements)
+            Ok(StmtList(statements))
         }
     }
 
@@ -233,20 +234,14 @@ mod tests {
     }
 
     #[rstest::rstest]
-    #[case("print 4;", "print(4)")]
-    #[case("print nil;\ntrue;", "print(nil)\nexpr(true)")]
+    #[case("print 4;", "print(4)\n")]
+    #[case("print nil;\ntrue;", "print(nil)\nexpr(true)\n")]
     fn test_parse(#[case] input: &str, #[case] want: &str) -> Result<(), LoxError> {
         let mut scanner = Scanner::new(input);
         let tokens = scanner.scan_tokens()?;
         let mut parser = Parser::new(&tokens);
         let stmts = parser.parse()?;
-        let mut got = String::new();
-        for (i, stmt) in stmts.into_iter().enumerate() {
-            if i > 0 {
-                got.push('\n')
-            }
-            got.push_str(&format!("{stmt}"));
-        }
+        let got = format!("{}", stmts);
         assert_eq!(got, want);
         Ok(())
     }

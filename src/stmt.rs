@@ -15,3 +15,15 @@ impl<'a> fmt::Display for Stmt<'a> {
         }
     }
 }
+
+#[derive(Debug)]
+pub struct StmtList<'a>(pub Vec<Stmt<'a>>);
+
+impl<'a> fmt::Display for StmtList<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for stmt in self.0.iter() {
+            writeln!(f, "{stmt}")?;
+        }
+        Ok(())
+    }
+}
