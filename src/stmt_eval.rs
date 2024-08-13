@@ -1,6 +1,5 @@
 use crate::error::LoxError;
 use crate::stmt::Stmt;
-use crate::value::ValueError;
 use std::io;
 
 impl<'a> Stmt<'a> {
