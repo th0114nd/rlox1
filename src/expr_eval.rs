@@ -4,7 +4,7 @@ use crate::value::Value;
 use crate::value::ValueError;
 
 impl<'a> Expr<'a> {
-    fn eval(&self) -> Result<Value, ValueError> {
+    pub fn eval(&self) -> Result<Value, ValueError> {
         match self {
             Expr::Literal(value) => Ok(value.clone()),
             Expr::Grouping(expr) => expr.eval(),

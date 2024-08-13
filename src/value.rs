@@ -32,7 +32,7 @@ impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             VNumber(x) => x.fmt(f),
-            VString(s) => write!(f, "\"{s}\""),
+            VString(s) => write!(f, "{s}"),
             Bool(b) => b.fmt(f),
             VNil => write!(f, "nil"),
             Class(x) => x.fmt(f),

@@ -12,8 +12,11 @@ pub type LoxResult<T> = Result<T, LoxError>;
 pub enum LoxError {
     #[error("[line {0}] Error: {1}")]
     ScanError(usize, String),
+
     #[error("{0}")]
     ParseError(String),
+    #[error("unexpected eof")]
+    UnexpectedEof,
 
     #[error(transparent)]
     IoError(#[from] io::Error),

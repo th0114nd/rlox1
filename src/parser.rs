@@ -23,7 +23,6 @@ impl<'long> Parser<'long> {
         let mut statements = vec![];
         let mut errors = vec![];
         while !self.is_at_end() {
-            // TODO: partial errors
             match self.statement() {
                 Ok(stmt) => statements.push(stmt),
                 Err(err) => {
@@ -31,7 +30,6 @@ impl<'long> Parser<'long> {
                     self.synchronize();
                 }
             }
-            statements.push(self.statement()?);
         }
         if !errors.is_empty() {
             Err(LoxError::MultiError(errors))
@@ -93,13 +91,13 @@ impl<'long> Parser<'long> {
 
     fn print_statement(&mut self) -> ResultStmt<'long> {
         let expr = self.expression()?;
-        self.consume(Semicolon, "Expect ';' after value.");
+        self.consume(Semicolon, "Expect ';' after value.")?;
         Ok(Stmt::Print(expr))
     }
 
     fn expression_statement(&mut self) -> ResultStmt<'long> {
         let expr = self.expression()?;
-        self.consume(Semicolon, "Expect ';' after value.");
+        self.consume(Semicolon, "Expect ';' after value.")?;
         Ok(Stmt::Expr(expr))
     }
 
@@ -157,7 +155,7 @@ impl<'long> Parser<'long> {
 
     fn primary(&mut self) -> ResultExpr<'long> {
         if self.is_at_end() {
-            panic!("I shouldn't be at the end")
+            return Err(LoxError::UnexpectedEof);
         }
         let cur_token = self.peek();
         match cur_token.token {
@@ -202,7 +200,7 @@ mod tests {
     #[case("10 / 2 / 1", "(/ (/ 10 2) 1)")]
     #[case(
         "\"seven\" == (-30 - 140 / 2) / -10",
-        "(== \"seven\" (/ (group (- (- 30) (/ 140 2))) (- 10)))"
+        "(== seven (/ (group (- (- 30) (/ 140 2))) (- 10)))"
     )]
     #[case("1 < 2 == 4 >= 3", "(== (< 1 2) (>= 4 3))")]
     fn test_parse_expr(#[case] input: &str, #[case] want: &str) -> Result<(), LoxError> {
@@ -217,13 +215,32 @@ mod tests {
 
     #[rstest::rstest]
     #[case("4 + 5;", "expr((+ 4 5))")]
-    #[case("print \"hello, world\";", "print(\"hello, world\")")]
+    #[case("print \"hello, world\";", "print(hello, world)")]
     fn test_parse_stmt(#[case] input: &str, #[case] want: &str) -> Result<(), LoxError> {
         let mut scanner = Scanner::new(input);
         let tokens = scanner.scan_tokens()?;
         let mut parser = Parser::new(&tokens);
         let stmt = parser.statement()?;
         let got = format!("{}", stmt);
+        assert_eq!(got, want);
+        Ok(())
+    }
+
+    #[rstest::rstest]
+    #[case("print 4;", "print(4)")]
+    #[case("print nil;\ntrue;", "print(nil)\nexpr(true)")]
+    fn test_parse(#[case] input: &str, #[case] want: &str) -> Result<(), LoxError> {
+        let mut scanner = Scanner::new(input);
+        let tokens = scanner.scan_tokens()?;
+        let mut parser = Parser::new(&tokens);
+        let stmts = parser.parse()?;
+        let mut got = String::new();
+        for (i, stmt) in stmts.into_iter().enumerate() {
+            if i > 0 {
+                got.push('\n')
+            }
+            got.push_str(&format!("{stmt}"));
+        }
         assert_eq!(got, want);
         Ok(())
     }
