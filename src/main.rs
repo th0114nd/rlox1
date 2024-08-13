@@ -25,10 +25,8 @@ fn run(src: &str) -> LoxResult<()> {
     let mut scanner = Scanner::new(src);
     let maybe_tokens = scanner.scan_tokens();
     if let Err(errs) = maybe_tokens {
-        for err in &errs {
-            eprintln!("{err}");
-        }
-        return Err(LoxError::from(errs));
+        eprintln!("{errs}");
+        return Err(errs);
     }
     let tokens = maybe_tokens.unwrap();
 

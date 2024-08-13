@@ -8,6 +8,8 @@ use thiserror::Error;
 
 pub type LoxResult<T> = Result<T, LoxError>;
 
+//
+
 #[derive(Debug, Error)]
 pub enum LoxError {
     #[error("[line {0}] Error: {1}")]
@@ -15,8 +17,8 @@ pub enum LoxError {
 
     #[error("{0}")]
     ParseError(String),
-    #[error("unexpected eof")]
-    UnexpectedEof,
+    #[error("[line {0}] Error: unexpected eof")]
+    UnexpectedEof(usize),
 
     #[error(transparent)]
     IoError(#[from] io::Error),

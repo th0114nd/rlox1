@@ -1,6 +1,7 @@
 use crate::expr::Expr;
 use std::fmt;
 
+#[derive(Debug)]
 pub enum Stmt<'a> {
     Expr(Expr<'a>),
     Print(Expr<'a>),

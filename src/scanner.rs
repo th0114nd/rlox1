@@ -56,7 +56,7 @@ impl<'a> Scanner<'a> {
         }
     }
 
-    pub fn scan_tokens(&mut self) -> Result<Vec<Token<'a>>, Vec<LoxError>> {
+    pub fn scan_tokens(&mut self) -> Result<Vec<Token<'a>>, LoxError> {
         while let Some((start, c)) = self.chars.peek() {
             self.start = *start;
             let c = *c;
@@ -71,7 +71,7 @@ impl<'a> Scanner<'a> {
         if self.errors.is_empty() {
             Ok(mem::take(&mut self.tokens))
         } else {
-            Err(mem::take(&mut self.errors))
+            Err(LoxError::MultiError(mem::take(&mut self.errors)))
         }
     }
 
@@ -268,14 +268,15 @@ vec![ "(", "!=", "!", "{", "-", ")", "+", "==", "}", "=", ";", "/", ">", ">=", "
         Ok(())
     }
 
-    #[test]
-    fn test_scan_types_error() {
-        let mut scanner = Scanner::new("var x = \"interrupted string ends here");
-        let result = scanner.scan_tokens();
-        assert!(result.is_err());
-
-        let mut scanner = Scanner::new("#nofilter");
-        let result = scanner.scan_tokens();
-        assert!(result.is_err());
+    #[rstest::rstest]
+    #[case(
+        "var x = \"interrupted string ends here",
+        "[line 1] Error: Unterminated string."
+    )]
+    #[case("\n\n#nofilter", "[line 3] Error: Unexpected character: #")]
+    fn test_scan_types_error(#[case] input: &str, #[case] want: &str) {
+        let mut scanner = Scanner::new(input);
+        let err = scanner.scan_tokens().expect_err("should fail to scan");
+        assert_eq!(format!("{}", err), want,);
     }
 }

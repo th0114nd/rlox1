@@ -159,7 +159,7 @@ impl<'long> Parser<'long> {
 
     fn primary(&mut self) -> ResultExpr<'long> {
         if self.is_at_end() {
-            return Err(LoxError::UnexpectedEof);
+            return Err(LoxError::UnexpectedEof(self.current));
         }
         let cur_token = self.peek();
         match cur_token {
@@ -174,7 +174,7 @@ impl<'long> Parser<'long> {
                 self.consume(RightParen, "Expect ')' after expression")?;
                 Ok(Expr::Grouping(Box::new(expr)))
             }
-            _ => panic!("unreachable arm {cur_token:?}"),
+            _ => panic!("primary unreachable arm {cur_token:?}"),
         }
     }
 
@@ -246,6 +246,25 @@ mod tests {
             got.push_str(&format!("{stmt}"));
         }
         assert_eq!(got, want);
+        Ok(())
+    }
+
+    #[rstest::rstest]
+    #[case(
+        "( \"partial\" + \"group\" ;",
+        "[line 1] Error at ';': Expect ')' after expression"
+    )]
+    #[case("2 +", "[line 2] Error: unexpected eof")]
+    #[case("+ 1", "primary unreachable arm Plus")]
+    #[case("2 + ;", "primary unreachable arm Semicolon")]
+    #[case("print 4\n2 + 4", "[line 2] Error at '2': Expect ';' after value.")]
+    #[case("print 4;\n 2 + 4", "[line 2] Error at end: Expect ';' after value.")]
+    fn test_parse_errors(#[case] input: &str, #[case] want: &str) -> Result<(), LoxError> {
+        let mut scanner = Scanner::new(input);
+        let tokens = scanner.scan_tokens()?;
+        let mut parser = Parser::new(&tokens);
+        let got = parser.parse().expect_err("should have failed to parse");
+        assert_eq!(format!("{}", got), want);
         Ok(())
     }
 }

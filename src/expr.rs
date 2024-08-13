@@ -3,6 +3,7 @@ use crate::value;
 use std::fmt;
 
 // What can we do with an expr?
+#[derive(Debug)]
 pub enum Expr<'a> {
     Literal(value::Value),
     Grouping(Box<Expr<'a>>),
