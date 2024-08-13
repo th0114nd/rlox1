@@ -15,11 +15,9 @@ mod stmt_eval;
 mod token;
 mod value;
 
-use crate::error::LoxError;
 use crate::error::LoxResult;
 use crate::parser::Parser;
 use crate::scanner::Scanner;
-use crate::value::ValueError;
 
 fn run(src: &str) -> LoxResult<()> {
     let mut scanner = Scanner::new(src);

@@ -158,11 +158,9 @@ impl<'long> Parser<'long> {
     }
 
     fn primary(&mut self) -> ResultExpr<'long> {
-        if self.is_at_end() {
-            return Err(LoxError::UnexpectedEof(self.current));
-        }
         let cur_token = self.peek();
         match cur_token {
+            Eof => Err(LoxError::UnexpectedEof(self.current)),
             False | True | Nil | TNumber(_) | TString(_) => {
                 let expr = Expr::Literal(cur_token.into());
                 self.advance();
@@ -174,7 +172,11 @@ impl<'long> Parser<'long> {
                 self.consume(RightParen, "Expect ')' after expression")?;
                 Ok(Expr::Grouping(Box::new(expr)))
             }
-            _ => panic!("primary unreachable arm {cur_token:?}"),
+            _ => {
+                let token = self.tokens[self.current];
+                let err_msg = "unexpected token";
+                Err(LoxError::from((token, err_msg)))
+            }
         }
     }
 
@@ -255,8 +257,8 @@ mod tests {
         "[line 1] Error at ';': Expect ')' after expression"
     )]
     #[case("2 +", "[line 2] Error: unexpected eof")]
-    #[case("+ 1", "primary unreachable arm Plus")]
-    #[case("2 + ;", "primary unreachable arm Semicolon")]
+    #[case("+ 1", "[line 1] Error at '+': unexpected token")]
+    #[case("2 + ;", "[line 1] Error at ';': unexpected token")]
     #[case("print 4\n2 + 4", "[line 2] Error at '2': Expect ';' after value.")]
     #[case("print 4;\n 2 + 4", "[line 2] Error at end: Expect ';' after value.")]
     fn test_parse_errors(#[case] input: &str, #[case] want: &str) -> Result<(), LoxError> {
