@@ -10,6 +10,8 @@ mod expr;
 mod expr_eval;
 mod parser;
 mod scanner;
+mod stmt;
+mod stmt_eval;
 mod token;
 mod value;
 
@@ -30,10 +32,10 @@ fn run(src: &str) -> LoxResult<()> {
     let tokens = maybe_tokens.unwrap();
 
     let mut parser = Parser::new(&tokens);
-    let expr = parser.parse();
-    match expr {
+    let stmts = parser.parse();
+    match stmts {
         Err(err) => eprintln!("{err}"),
-        Ok(expr) => println!("{expr}"),
+        Ok(stmts) => stmts.iter().map(|s| println!("{s}")).collect(),
     }
     Ok(())
 }

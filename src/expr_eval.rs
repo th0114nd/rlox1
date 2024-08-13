@@ -65,7 +65,7 @@ mod tests {
         let mut scanner = crate::scanner::Scanner::new(input);
         let tokens = scanner.scan_tokens()?;
         let mut parser = crate::parser::Parser::new(&tokens);
-        let expr = parser.parse()?;
+        let expr = parser.expression()?;
         let got = expr.eval()?;
         assert_eq!(got, want);
         Ok(())

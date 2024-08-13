@@ -1,11 +1,13 @@
 use crate::error::LoxError;
 use crate::error::LoxResult;
 use crate::expr::Expr;
+use crate::stmt::Stmt;
 use crate::token::Token;
 use crate::token::TokenType;
 use crate::token::TokenType::*;
 
 type ResultExpr<'a> = LoxResult<Expr<'a>>;
+type ResultStmt<'a> = LoxResult<Stmt<'a>>;
 
 pub struct Parser<'long> {
     tokens: &'long [Token<'long>],
@@ -17,8 +19,25 @@ impl<'long> Parser<'long> {
         Self { tokens, current: 0 }
     }
 
-    pub fn parse(&mut self) -> LoxResult<Expr> {
-        self.expression()
+    pub fn parse(&mut self) -> LoxResult<Vec<Stmt>> {
+        let mut statements = vec![];
+        let mut errors = vec![];
+        while !self.is_at_end() {
+            // TODO: partial errors
+            match self.statement() {
+                Ok(stmt) => statements.push(stmt),
+                Err(err) => {
+                    errors.push(err);
+                    self.synchronize();
+                }
+            }
+            statements.push(self.statement()?);
+        }
+        if !errors.is_empty() {
+            Err(LoxError::MultiError(errors))
+        } else {
+            Ok(statements)
+        }
     }
 
     fn advance(&mut self) {
@@ -64,7 +83,27 @@ impl<'long> Parser<'long> {
         false
     }
 
-    fn expression(&mut self) -> ResultExpr<'long> {
+    fn statement(&mut self) -> ResultStmt<'long> {
+        if self.token_match(&[Print]) {
+            self.print_statement()
+        } else {
+            self.expression_statement()
+        }
+    }
+
+    fn print_statement(&mut self) -> ResultStmt<'long> {
+        let expr = self.expression()?;
+        self.consume(Semicolon, "Expect ';' after value.");
+        Ok(Stmt::Print(expr))
+    }
+
+    fn expression_statement(&mut self) -> ResultStmt<'long> {
+        let expr = self.expression()?;
+        self.consume(Semicolon, "Expect ';' after value.");
+        Ok(Stmt::Expr(expr))
+    }
+
+    pub fn expression(&mut self) -> ResultExpr<'long> {
         self.equality()
     }
 
@@ -172,6 +211,19 @@ mod tests {
         let mut parser = Parser::new(&tokens);
         let expr = parser.expression()?;
         let got = format!("{}", expr);
+        assert_eq!(got, want);
+        Ok(())
+    }
+
+    #[rstest::rstest]
+    #[case("4 + 5;", "expr((+ 4 5))")]
+    #[case("print \"hello, world\";", "print(\"hello, world\")")]
+    fn test_parse_stmt(#[case] input: &str, #[case] want: &str) -> Result<(), LoxError> {
+        let mut scanner = Scanner::new(input);
+        let tokens = scanner.scan_tokens()?;
+        let mut parser = Parser::new(&tokens);
+        let stmt = parser.statement()?;
+        let got = format!("{}", stmt);
         assert_eq!(got, want);
         Ok(())
     }
