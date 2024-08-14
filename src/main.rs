@@ -25,20 +25,11 @@ use crate::scanner::Scanner;
 
 fn run(int: &mut Interpreter<io::Stdout>, src: &str) -> LoxResult<()> {
     let mut scanner = Scanner::new(src);
-    let maybe_tokens = scanner.scan_tokens();
-    if let Err(errs) = maybe_tokens {
-        eprintln!("{errs}");
-        return Err(errs);
-    }
-    let tokens = maybe_tokens.unwrap();
-
+    let tokens = scanner.scan_tokens()?;
     let mut parser = Parser::new(&tokens);
-    let stmts = parser.parse();
-    match stmts {
-        Err(err) => eprintln!("{err}"),
-        Ok(stmts) => int.interpret(stmts)?.into_iter().collect(),
-    }
-    Ok(())
+    let stmts = parser.parse()?;
+
+    int.interpret(stmts).map(|_| ())
 }
 
 fn run_prompt(int: &mut Interpreter<io::Stdout>) -> LoxResult<()> {
@@ -51,8 +42,10 @@ fn run_prompt(int: &mut Interpreter<io::Stdout>) -> LoxResult<()> {
         if input.is_empty() {
             return Ok(());
         }
-        // TODO: log?
-        let _ = run(int, &input);
+        // error logging is handled by run
+        if let Err(err) = run(int, &input) {
+            eprintln!("{err}");
+        }
     }
 }
 
@@ -60,7 +53,11 @@ fn run_file(int: &mut Interpreter<io::Stdout>, file_name: &str) -> LoxResult<()>
     let mut file = File::open(file_name)?;
     let mut contents = String::new();
     file.read_to_string(&mut contents)?;
-    run(int, &contents)
+    if let Err(err) = run(int, &contents) {
+        eprintln!("{err}");
+        std::process::exit(75);
+    }
+    Ok(())
 }
 
 fn main() -> LoxResult<()> {
