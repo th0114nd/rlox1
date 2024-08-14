@@ -6,6 +6,7 @@ use std::fmt;
 #[derive(Debug)]
 pub enum Expr<'a> {
     Literal(value::Value),
+    Variable(Token<'a>),
     Grouping(Box<Expr<'a>>),
     Unary {
         operator: Token<'a>,
@@ -22,6 +23,7 @@ impl<'a> fmt::Display for Expr<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self {
             Expr::Literal(value) => write!(f, "{}", value),
+            Expr::Variable(token) => write!(f, "v#{}", token.lexeme),
             Expr::Grouping(gr) => write!(f, "(group {})", gr),
             Expr::Unary { operator, right } => write!(f, "({} {right})", operator.lexeme),
             Expr::Binary {

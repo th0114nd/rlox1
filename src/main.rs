@@ -5,6 +5,7 @@ use std::io::BufRead;
 use std::io::Write;
 use std::io::{self, Read};
 
+mod environment;
 mod error;
 mod expr;
 mod expr_eval;

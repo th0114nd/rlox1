@@ -11,6 +11,8 @@ pub enum ValueError {
     TypeMismatch(Value, Value),
     #[error("zero division error")]
     ZeroDivError,
+    #[error("undefined variable: '{0}'")]
+    UndefinedVariable(String),
 }
 
 type OpOutput = Result<Value, ValueError>;

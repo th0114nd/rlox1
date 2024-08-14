@@ -6,6 +6,7 @@ use crate::stmt::StmtList;
 use crate::token::Token;
 use crate::token::TokenType;
 use crate::token::TokenType::*;
+use std::mem;
 
 type ResultExpr<'a> = LoxResult<Expr<'a>>;
 type ResultStmt<'a> = LoxResult<Stmt<'a>>;
@@ -13,29 +14,28 @@ type ResultStmt<'a> = LoxResult<Stmt<'a>>;
 pub struct Parser<'long> {
     tokens: &'long [Token<'long>],
     current: usize,
+    statements: Vec<Stmt<'long>>,
+    errors: Vec<LoxError>,
 }
 
 impl<'long> Parser<'long> {
     pub fn new(tokens: &'long [Token]) -> Self {
-        Self { tokens, current: 0 }
+        Self {
+            tokens,
+            current: 0,
+            statements: vec![],
+            errors: vec![],
+        }
     }
 
     pub fn parse(&mut self) -> LoxResult<StmtList> {
-        let mut statements = vec![];
-        let mut errors = vec![];
         while !self.is_at_end() {
-            match self.statement() {
-                Ok(stmt) => statements.push(stmt),
-                Err(err) => {
-                    errors.push(err);
-                    self.synchronize();
-                }
-            }
+            self.line();
         }
-        if !errors.is_empty() {
-            Err(LoxError::MultiError(errors))
+        if !self.errors.is_empty() {
+            Err(LoxError::MultiError(mem::take(&mut self.errors)))
         } else {
-            Ok(StmtList(statements))
+            Ok(StmtList(mem::take(&mut self.statements)))
         }
     }
 
@@ -84,6 +84,32 @@ impl<'long> Parser<'long> {
             }
         }
         false
+    }
+
+    fn line(&mut self) {
+        match self.declaration() {
+            Err(err) => {
+                self.errors.push(err);
+                self.synchronize();
+            }
+            Ok(stmt) => self.statements.push(stmt),
+        };
+    }
+
+    fn declaration(&mut self) -> ResultStmt<'long> {
+        if self.token_match(&[Var]) {
+            self.consume(Identifier, "expected identifier in declaration")?;
+            let lhs = self.previous();
+            let rhs: Option<Expr<'long>> = if self.token_match(&[Equal]) {
+                Some(self.expression()?)
+            } else {
+                None
+            };
+            self.consume(Semicolon, "Expected ';' after variable declaration")?;
+            Ok(Stmt::VarDecl(lhs, rhs))
+        } else {
+            self.statement()
+        }
     }
 
     fn statement(&mut self) -> ResultStmt<'long> {
@@ -173,6 +199,10 @@ impl<'long> Parser<'long> {
                 self.consume(RightParen, "Expect ')' after expression")?;
                 Ok(Expr::Grouping(Box::new(expr)))
             }
+            Identifier => {
+                self.advance();
+                Ok(Expr::Variable(self.previous()))
+            }
             _ => {
                 let token = self.tokens[self.current];
                 let err_msg = "unexpected token";
@@ -210,6 +240,7 @@ mod tests {
         "(== seven (/ (group (- (- 30) (/ 140 2))) (- 10)))"
     )]
     #[case("1 < 2 == 4 >= 3", "(== (< 1 2) (>= 4 3))")]
+    #[case("foo + bar - baz", "(- (+ v#foo v#bar) v#baz)")]
     fn test_parse_expr(#[case] input: &str, #[case] want: &str) -> Result<(), LoxError> {
         let mut scanner = Scanner::new(input);
         let tokens = scanner.scan_tokens()?;
@@ -223,11 +254,13 @@ mod tests {
     #[rstest::rstest]
     #[case("4 + 5;", "expr((+ 4 5))")]
     #[case("print \"hello, world\";", "print(hello, world)")]
+    #[case("var x = 17 + 1;", "var(x = (+ 17 1))")]
+    #[case("var y;", "var(y)")]
     fn test_parse_stmt(#[case] input: &str, #[case] want: &str) -> Result<(), LoxError> {
         let mut scanner = Scanner::new(input);
         let tokens = scanner.scan_tokens()?;
         let mut parser = Parser::new(&tokens);
-        let stmt = parser.statement()?;
+        let stmt = parser.declaration()?;
         let got = format!("{}", stmt);
         assert_eq!(got, want);
         Ok(())
@@ -256,6 +289,22 @@ mod tests {
     #[case("2 + ;", "[line 1] Error at ';': unexpected token")]
     #[case("print 4\n2 + 4", "[line 2] Error at '2': Expect ';' after value.")]
     #[case("print 4;\n 2 + 4", "[line 2] Error at end: Expect ';' after value.")]
+    #[case(
+        "var 72;",
+        "[line 1] Error at '72': expected identifier in declaration"
+    )]
+    #[case(
+        "var 72 = 4;",
+        "[line 1] Error at '72': expected identifier in declaration"
+    )]
+    #[case(
+        "var ident + 2 = \"value\";",
+        "[line 1] Error at '+': Expected ';' after variable declaration"
+    )]
+    #[case(
+        "var y",
+        "[line 1] Error at end: Expected ';' after variable declaration"
+    )]
     fn test_parse_errors(#[case] input: &str, #[case] want: &str) -> Result<(), LoxError> {
         let mut scanner = Scanner::new(input);
         let tokens = scanner.scan_tokens()?;

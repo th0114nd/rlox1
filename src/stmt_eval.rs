@@ -1,28 +1,46 @@
+use crate::environment::Environment;
 use crate::error::LoxError;
 use crate::stmt::Stmt;
 use crate::stmt::StmtList;
+use crate::value::Value;
 use std::io;
 
 impl<'a> StmtList<'a> {
     pub fn eval(self, mut w: impl io::Write) -> Result<Vec<()>, LoxError> {
+        // TODO: env should outlive an evaluation, for example in an interpreter
+        let mut env = Environment::default();
         self.0
             .into_iter()
             .enumerate()
-            .map(|(current, ref s)| s.eval(current + 1, &mut w))
+            .map(|(current, ref s)| s.eval(current + 1, &mut w, &mut env))
             .collect::<Result<Vec<()>, LoxError>>()
     }
 }
 
 impl<'a> Stmt<'a> {
-    pub fn eval(&self, current: usize, mut w: impl io::Write) -> Result<(), LoxError> {
+    pub fn eval(
+        &self,
+        current: usize,
+        mut w: impl io::Write,
+        env: &mut Environment,
+    ) -> Result<(), LoxError> {
         match self {
             Stmt::Expr(expr) => {
-                expr.eval(current)?;
+                expr.eval(current, env)?;
                 Ok(())
             }
             Stmt::Print(expr) => {
-                let v = expr.eval(current)?;
+                let v = expr.eval(current, env)?;
                 writeln!(w, "{v}").expect("writes should not fail");
+                Ok(())
+            }
+            // TODO: test
+            Stmt::VarDecl(token, expr) => {
+                let value = match expr {
+                    None => Value::VNil,
+                    Some(expr) => expr.eval(current, env)?,
+                };
+                env.define(token.lexeme, value);
                 Ok(())
             }
         }
@@ -31,10 +49,18 @@ impl<'a> Stmt<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::error::LoxResult;
     use crate::parser::Parser;
     use crate::scanner::Scanner;
+
+    fn str_eval(input: &str, buf: &mut Vec<u8>) -> LoxResult<Vec<()>> {
+        let mut scanner = Scanner::new(input);
+        let tokens = scanner.scan_tokens()?;
+        let mut parser = Parser::new(&tokens);
+        let stmts = parser.parse()?;
+
+        stmts.eval(buf)
+    }
 
     #[rstest::rstest]
     #[case("nil;", vec![()], "")]
@@ -43,23 +69,14 @@ mod tests {
     #[case("true;", vec![()], "")]
     #[case("print 3 + 4; 10;", vec![(), ()], "7\n")]
     #[case("print 3 + 4; print \"hello\";", vec![(), ()], "7\nhello\n")]
+    #[case("var x = 17; print x; var x = nil; print x;", vec![(), (), (), ()],"17\nnil\n")]
     fn test_eval(
         #[case] input: &str,
         #[case] want: Vec<()>,
         #[case] want_stdout: &'static str,
     ) -> LoxResult<()> {
-        let mut scanner = Scanner::new(input);
-        let tokens = scanner.scan_tokens()?;
-        let mut parser = Parser::new(&tokens);
-        let stmts = parser.parse()?;
-
         let mut buf = vec![];
-
-        let got: Vec<()> = stmts.eval(&mut buf)?;
-        //.into_iter()
-        //.enumerate()
-        //.map(|(current, ref s)| s.eval(current, &mut buf))
-        //.collect::<Result<Vec<()>, LoxError>>()?;
+        let got = str_eval(input, &mut buf)?;
         assert_eq!(got, want);
 
         assert_eq!(std::str::from_utf8(&buf), Ok(want_stdout));
@@ -77,16 +94,8 @@ mod tests {
         #[case] want: &str,
         #[case] want_stdout: &str,
     ) -> LoxResult<()> {
-        let mut scanner = Scanner::new(input);
-        let tokens = scanner.scan_tokens()?;
-        let mut parser = Parser::new(&tokens);
-        let stmts = parser.parse()?;
-
         let mut buf = vec![];
-
-        let got = stmts
-            .eval(&mut buf)
-            .expect_err("should have created an error");
+        let got = str_eval(input, &mut buf).expect_err("should have created an error");
 
         assert_eq!(format!("{got}"), want);
 
