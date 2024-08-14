@@ -1,21 +1,8 @@
 use crate::environment::Environment;
 use crate::error::LoxError;
 use crate::stmt::Stmt;
-use crate::stmt::StmtList;
 use crate::value::Value;
 use std::io;
-
-impl<'a> StmtList<'a> {
-    pub fn eval(self, mut w: impl io::Write) -> Result<Vec<()>, LoxError> {
-        // TODO: env should outlive an evaluation, for example in an interpreter
-        let mut env = Environment::default();
-        self.0
-            .into_iter()
-            .enumerate()
-            .map(|(current, ref s)| s.eval(current + 1, &mut w, &mut env))
-            .collect::<Result<Vec<()>, LoxError>>()
-    }
-}
 
 impl<'a> Stmt<'a> {
     pub fn eval(
@@ -49,7 +36,9 @@ impl<'a> Stmt<'a> {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::error::LoxResult;
+    use crate::interpreter::Interpreter;
     use crate::parser::Parser;
     use crate::scanner::Scanner;
 
@@ -59,7 +48,11 @@ mod tests {
         let mut parser = Parser::new(&tokens);
         let stmts = parser.parse()?;
 
-        stmts.eval(buf)
+        let mut interpreter = Interpreter {
+            environment: Environment::default(),
+            w: buf,
+        };
+        interpreter.interpret(stmts)
     }
 
     #[rstest::rstest]
