@@ -5,7 +5,7 @@ use thiserror::Error;
 
 use crate::token::TokenType;
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq)]
 pub enum ValueError {
     #[error("type mismatch: {0} vs {1}")]
     TypeMismatch(Value, Value),
@@ -29,6 +29,12 @@ pub enum Value {
 }
 
 use Value::*;
+
+impl Default for Value {
+    fn default() -> Self {
+        VNil
+    }
+}
 
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

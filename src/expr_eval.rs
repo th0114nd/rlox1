@@ -6,17 +6,23 @@ use crate::value::Value;
 use crate::value::ValueError;
 
 impl<'a> Expr<'a> {
-    pub fn eval(&self, current: usize, env: &Environment) -> Result<Value, LoxError> {
+    pub fn eval(&self, current: usize, env: &mut Environment) -> Result<Value, LoxError> {
         match self.priv_eval(env) {
             Ok(v) => Ok(v),
             Err(value_error) => Err(LoxError::ValueError(current, value_error)),
         }
     }
 
-    fn priv_eval(&self, env: &Environment) -> Result<Value, ValueError> {
+    fn priv_eval(&self, env: &mut Environment) -> Result<Value, ValueError> {
         match self {
             Expr::Literal(value) => Ok(value.clone()),
             Expr::Variable(token) => env.get(token.lexeme),
+            Expr::Assign { name, value } => {
+                let right = value.priv_eval(env)?;
+                // TODO: No clone
+                env.assign(name.lexeme, right.clone())?;
+                Ok(right)
+            }
             Expr::Grouping(expr) => expr.priv_eval(env),
             Expr::Unary { operator, right } => {
                 let right = right.priv_eval(env)?;
@@ -61,7 +67,7 @@ mod tests {
     use crate::scanner::Scanner;
     use Value::*;
 
-    fn str_eval(input: &str, env: &Environment) -> LoxResult<Value> {
+    fn str_eval(input: &str, env: &mut Environment) -> LoxResult<Value> {
         let mut scanner = Scanner::new(input);
         let tokens = scanner.scan_tokens()?;
         let mut parser = Parser::new(&tokens);
@@ -84,8 +90,8 @@ mod tests {
     #[case("0 - -7", VNumber(7.0))]
     #[case(r#""lox" == "lo" + "x""#, Bool(true))]
     fn test_eval(#[case] input: &str, #[case] want: Value) -> LoxResult<()> {
-        let env = Environment::default();
-        let got = str_eval(input, &env)?;
+        let mut env = Environment::default();
+        let got = str_eval(input, &mut env)?;
         assert_eq!(got, want);
         Ok(())
     }
@@ -100,8 +106,8 @@ mod tests {
         "[line 107] Error: value error: undefined variable: 'something'"
     )]
     fn test_eval_error(#[case] input: &str, #[case] want: &str) -> LoxResult<()> {
-        let env = Environment::default();
-        let got = str_eval(input, &env).expect_err("should not evaluated");
+        let mut env = Environment::default();
+        let got = str_eval(input, &mut env).expect_err("should not evaluated");
         assert_eq!(format!("{got}"), want);
         Ok(())
     }
@@ -111,7 +117,7 @@ mod tests {
     fn test_eval_env(#[case] input: &str, #[case] want: Value) -> LoxResult<()> {
         let mut env = Environment::default();
         env.define("defined", VNumber(81.0));
-        let got = str_eval(input, &env)?;
+        let got = str_eval(input, &mut env)?;
         assert_eq!(got, want);
         Ok(())
     }

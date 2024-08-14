@@ -1,3 +1,4 @@
+#![feature(hash_raw_entry)]
 #![feature(let_chains)]
 use std::fs::File;
 use std::io;

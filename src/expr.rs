@@ -7,6 +7,10 @@ use std::fmt;
 pub enum Expr<'a> {
     Literal(value::Value),
     Variable(Token<'a>),
+    Assign {
+        name: Token<'a>,
+        value: Box<Expr<'a>>,
+    },
     Grouping(Box<Expr<'a>>),
     Unary {
         operator: Token<'a>,
@@ -24,6 +28,7 @@ impl<'a> fmt::Display for Expr<'a> {
         match &self {
             Expr::Literal(value) => write!(f, "{}", value),
             Expr::Variable(token) => write!(f, "v#{}", token.lexeme),
+            Expr::Assign { name, value } => write!(f, "v#{} ={value}", name.lexeme),
             Expr::Grouping(gr) => write!(f, "(group {})", gr),
             Expr::Unary { operator, right } => write!(f, "({} {right})", operator.lexeme),
             Expr::Binary {
