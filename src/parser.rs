@@ -115,6 +115,8 @@ impl<'long> Parser<'long> {
     fn statement(&mut self) -> ResultStmt<'long> {
         if self.token_match(&[Print]) {
             self.print_statement()
+        } else if self.token_match(&[LeftBrace]) {
+            self.block()
         } else {
             self.expression_statement()
         }
@@ -124,6 +126,16 @@ impl<'long> Parser<'long> {
         let expr = self.expression()?;
         self.consume(Semicolon, "Expect ';' after value.")?;
         Ok(Stmt::Print(expr))
+    }
+
+    fn block(&mut self) -> ResultStmt<'long> {
+        //let left_brace = self.previous()?;
+        let mut statements = vec![];
+        while !self.check(RightBrace) && !self.is_at_end() {
+            let decl = self.declaration()?;
+            statements.push(decl);
+        }
+        Ok(Stmt::Block(statements))
     }
 
     fn expression_statement(&mut self) -> ResultStmt<'long> {
@@ -288,6 +300,8 @@ mod tests {
     #[rstest::rstest]
     #[case("print 4;", "print(4)\n")]
     #[case("print nil;\ntrue;", "print(nil)\nexpr(true)\n")]
+    #[case("{}", "")]
+    #[case("{ print nil; }", "")]
     fn test_parse(#[case] input: &str, #[case] want: &str) -> Result<(), LoxError> {
         let mut scanner = Scanner::new(input);
         let tokens = scanner.scan_tokens()?;

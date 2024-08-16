@@ -10,7 +10,7 @@ pub trait SEval {
     fn eval(
         &self,
         current: usize,
-        w: impl io::Write,
+        w: &mut impl io::Write,
         env: &mut Environment,
     ) -> Result<(), LoxError>;
 }
@@ -19,7 +19,7 @@ impl<'a> SEval for &Stmt<'a> {
     fn eval(
         &self,
         current: usize,
-        mut w: impl io::Write,
+        w: &mut impl io::Write,
         env: &mut Environment,
     ) -> Result<(), LoxError> {
         match self {
@@ -39,6 +39,31 @@ impl<'a> SEval for &Stmt<'a> {
                 };
                 env.define(token.lexeme, value);
                 Ok(())
+            }
+            Stmt::Block(stmts) => {
+                //let stmt_list = StmtList(stmts)
+                env.fork(|env| {
+                    //env.push();
+                    //defer!(env.pop());
+                    //let mut result = Ok(());
+                    for (offset, s) in stmts.iter().enumerate() {
+                        //result = result.and(s.eval(current + offset + 1, w, env));
+                        s.eval(current + offset + 1, w, env)?;
+                    }
+                    //Ok::<Result<(), ValueError>>(())
+                    Ok(())
+                })
+                //env.pop();
+                //iresult
+                //result
+                //Ok(())
+                //let result = stmts
+                //    .iter()
+                //    .enumerate()
+                //    .try_for_each(|(offset, ref s)| s.eval(current + offset + 1, w, env));
+                //env.pop();
+                //result
+                //})
             }
         }
     }

@@ -7,6 +7,7 @@ pub enum Stmt<'a> {
     Expr(Expr<'a>),
     Print(Expr<'a>),
     VarDecl(Token<'a>, Option<Expr<'a>>),
+    Block(Vec<Stmt<'a>>),
 }
 
 impl<'a> fmt::Display for Stmt<'a> {
@@ -18,6 +19,13 @@ impl<'a> fmt::Display for Stmt<'a> {
                 None => write!(f, "var({})", token.lexeme),
                 Some(expr) => write!(f, "var({} = {expr})", token.lexeme),
             },
+            Stmt::Block(stmts) => {
+                writeln!(f, "{{")?;
+                for stmt in stmts {
+                    writeln!(f, "{stmt}")?;
+                }
+                writeln!(f, "}}")
+            }
         }
     }
 }

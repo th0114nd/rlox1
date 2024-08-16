@@ -24,10 +24,19 @@ impl Default for Environment {
 
 impl Environment {
     pub fn fork<T>(&mut self, f: impl FnOnce(&mut Self) -> T) -> T {
+        //pub fn fork<T>(&mut self, f: impl Fn(&mut Self) -> T) -> T {
         self.stack.push(HashMap::new());
         let res = f(self);
         self.stack.pop();
         res
+    }
+
+    pub fn push(&mut self) {
+        self.stack.push(HashMap::new());
+    }
+
+    pub fn pop(&mut self) {
+        self.stack.pop();
     }
 }
 
