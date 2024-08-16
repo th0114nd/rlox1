@@ -125,10 +125,7 @@ impl std::ops::Mul for Value {
 
 impl From<Value> for bool {
     fn from(value: Value) -> bool {
-        match value {
-            VNil | Bool(false) => false,
-            _ => true,
-        }
+        !matches!(value, VNil | Bool(false))
     }
 }
 
