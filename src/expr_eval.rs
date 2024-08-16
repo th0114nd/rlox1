@@ -15,11 +15,13 @@ impl<'a> Expr<'a> {
 
     fn priv_eval(&self, env: &mut Environment) -> Result<Value, ValueError> {
         match self {
+            // TODO: no clone / refcount?
             Expr::Literal(value) => Ok(value.clone()),
-            Expr::Variable(token) => env.get(token.lexeme),
+            // TODO: no clone / refcout?
+            Expr::Variable(token) => env.get(token.lexeme).cloned(),
             Expr::Assign { name, value } => {
                 let right = value.priv_eval(env)?;
-                // TODO: No clone
+                // TODO: No clone / refcount?
                 env.assign(name.lexeme, right.clone())?;
                 Ok(right)
             }

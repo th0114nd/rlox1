@@ -21,7 +21,6 @@ impl<'a> Stmt<'a> {
                 writeln!(w, "{v}").expect("writes should not fail");
                 Ok(())
             }
-            // TODO: test
             Stmt::VarDecl(token, expr) => {
                 let value = match expr {
                     None => Value::VNil,
@@ -63,6 +62,7 @@ mod tests {
     #[case("print 3 + 4; 10;", vec![(), ()], "7\n")]
     #[case("print 3 + 4; print \"hello\";", vec![(), ()], "7\nhello\n")]
     #[case("var x = 17; print x; var x = nil; print x;", vec![(), (), (), ()],"17\nnil\n")]
+    #[case("var x = 17; print x; x = nil; print x;", vec![(), (), (), ()],"17\nnil\n")]
     fn test_eval(
         #[case] input: &str,
         #[case] want: Vec<()>,
@@ -82,6 +82,7 @@ mod tests {
         "[line 2] Error: value error: type mismatch: 4 vs lox",
         "nil\n"
     )]
+    #[case("x = 4;", "[line 1] Error: value error: undefined variable: 'x'", "")]
     fn test_eval_error(
         #[case] input: &str,
         #[case] want: &str,

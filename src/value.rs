@@ -19,30 +19,25 @@ type OpOutput = Result<Value, ValueError>;
 
 pub trait AnyClass: fmt::Display + fmt::Debug {}
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub enum Value {
+    #[default]
+    VNil,
+    Bool(bool),
     VNumber(f64),
     VString(String),
-    Bool(bool),
-    VNil,
     Class(Rc<dyn AnyClass>),
 }
 
 use Value::*;
 
-impl Default for Value {
-    fn default() -> Self {
-        VNil
-    }
-}
-
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            VNumber(x) => x.fmt(f),
-            VString(s) => write!(f, "{s}"),
-            Bool(b) => b.fmt(f),
             VNil => write!(f, "nil"),
+            VNumber(x) => x.fmt(f),
+            Bool(b) => b.fmt(f),
+            VString(s) => write!(f, "{s}"),
             Class(x) => x.fmt(f),
         }
     }
@@ -77,11 +72,10 @@ impl std::ops::Add for Value {
     type Output = OpOutput;
 
     fn add(self, other: Value) -> Self::Output {
-        // TODO: I feel like this shouldn't need to to_owned in the happy path
-        match (&self, &other) {
+        match (self, other) {
             (VNumber(lhs), VNumber(rhs)) => Ok(VNumber(lhs + rhs)),
-            (VString(lhs), VString(rhs)) => Ok(VString(lhs.to_owned() + rhs)),
-            _ => Err(ValueError::TypeMismatch(self, other)),
+            (VString(lhs), VString(rhs)) => Ok(VString(lhs + &rhs)),
+            (x, y) => Err(ValueError::TypeMismatch(x, y)),
         }
     }
 }

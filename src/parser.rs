@@ -133,7 +133,7 @@ impl<'long> Parser<'long> {
     }
 
     pub fn expression(&mut self) -> ResultExpr<'long> {
-        self.equality()
+        self.assignment()
     }
 
     fn bin_op(
@@ -153,6 +153,23 @@ impl<'long> Parser<'long> {
             }
         }
         Ok(expr)
+    }
+
+    fn assignment(&mut self) -> ResultExpr<'long> {
+        let expr = self.equality()?;
+        if self.token_match(&[Equal]) {
+            let equals = self.previous();
+            let value = self.assignment()?;
+            match expr {
+                Expr::Variable(name) => Ok(Expr::Assign {
+                    name,
+                    value: Box::new(value),
+                }),
+                _ => Err(LoxError::from((equals, "Invalid assignment target."))),
+            }
+        } else {
+            Ok(expr)
+        }
     }
 
     fn equality(&mut self) -> ResultExpr<'long> {
@@ -241,6 +258,8 @@ mod tests {
     )]
     #[case("1 < 2 == 4 >= 3", "(== (< 1 2) (>= 4 3))")]
     #[case("foo + bar - baz", "(- (+ v#foo v#bar) v#baz)")]
+    #[case("a = 4", "(= v#a 4)")]
+    #[case("a = b = \"hello\"", "(= v#a (= v#b hello))")]
     fn test_parse_expr(#[case] input: &str, #[case] want: &str) -> Result<(), LoxError> {
         let mut scanner = Scanner::new(input);
         let tokens = scanner.scan_tokens()?;
@@ -305,6 +324,8 @@ mod tests {
         "var y",
         "[line 1] Error at end: Expected ';' after variable declaration"
     )]
+    #[case("17 = a", "[line 1] Error at '=': Invalid assignment target.")]
+    #[case("a = 17 = b", "[line 1] Error at '=': Invalid assignment target.")]
     fn test_parse_errors(#[case] input: &str, #[case] want: &str) -> Result<(), LoxError> {
         let mut scanner = Scanner::new(input);
         let tokens = scanner.scan_tokens()?;
