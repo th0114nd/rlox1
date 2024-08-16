@@ -26,8 +26,8 @@ impl Default for Interpreter<Vec<u8>> {
     }
 }
 
-impl<'a, W: io::Write> Interpreter<W> {
-    pub fn interpret(&mut self, stmts: StmtList<'a>) -> LoxResult<Vec<()>> {
+impl<W: io::Write> Interpreter<W> {
+    pub fn interpret(&mut self, stmts: StmtList) -> LoxResult<Vec<()>> {
         stmts
             .0
             .into_iter()

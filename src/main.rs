@@ -30,7 +30,7 @@ fn run(int: &mut Interpreter<io::Stdout>, src: &str) -> LoxResult<()> {
     let mut parser = Parser::new(&tokens);
     let stmts = parser.parse()?;
 
-    int.interpret(stmts).map(|_| ())
+    int.interpret(stmts).map(move |_| ())
 }
 
 fn run_prompt(int: &mut Interpreter<io::Stdout>) -> LoxResult<()> {

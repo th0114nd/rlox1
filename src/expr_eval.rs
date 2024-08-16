@@ -1,3 +1,4 @@
+use crate::environment::Env;
 use crate::environment::Environment;
 use crate::error::LoxError;
 use crate::expr::Expr;

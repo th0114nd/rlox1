@@ -1,3 +1,4 @@
+use crate::environment::Env;
 use crate::environment::Environment;
 use crate::error::LoxError;
 use crate::stmt::Stmt;
@@ -62,6 +63,7 @@ mod tests {
     #[case("print 3 + 4; 10;", vec![(), ()], "7\n")]
     #[case("print 3 + 4; print \"hello\";", vec![(), ()], "7\nhello\n")]
     #[case("var x = 17; print x; var x = nil; print x;", vec![(), (), (), ()],"17\nnil\n")]
+    #[case("var x = 17; var y = 13; x = y = 4; print x * y;", vec![(), (), (), ()],"16\n")]
     #[case("var x = 17; print x; x = nil; print x;", vec![(), (), (), ()],"17\nnil\n")]
     fn test_eval(
         #[case] input: &str,
