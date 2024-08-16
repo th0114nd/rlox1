@@ -1,11 +1,11 @@
 use crate::error::LoxError;
 use crate::error::LoxResult;
-use crate::expr::Expr;
-use crate::stmt::Stmt;
-use crate::stmt::StmtList;
-use crate::token::Token;
-use crate::token::TokenType;
-use crate::token::TokenType::*;
+use models::Expr;
+use models::Stmt;
+use models::StmtList;
+use models::Token;
+use models::TokenType;
+use models::TokenType::*;
 use std::mem;
 
 type ResultExpr<'a> = LoxResult<Expr<'a>>;

@@ -7,17 +7,17 @@ use std::io::BufRead;
 use std::io::Read;
 use std::io::Write;
 
-mod environment;
+//mod environment;
 mod error;
-mod expr;
+//mod expr;
 mod expr_eval;
 mod interpreter;
 mod parser;
 mod scanner;
-mod stmt;
+//mod stmt;
 mod stmt_eval;
-mod token;
-mod value;
+//mod token;
+//mod value;
 
 use crate::error::LoxResult;
 use crate::interpreter::Interpreter;

@@ -1,18 +1,33 @@
-use crate::environment::Env;
-use crate::environment::Environment;
+//use crate::environment::Env;
+//use crate::environment::Environment;
 use crate::error::LoxError;
-use crate::expr::Expr;
-use crate::token::TokenType::*;
-use crate::value::Value;
-use crate::value::ValueError;
+use environment::Env;
+use environment::Environment;
+//use crate::expr::Expr;
+//use crate::token::TokenType::*;
+//use crate::value::Value;
+//use crate::value::ValueError;
+use models::Expr;
+use models::TokenType::*;
+use models::Value;
+use models::ValueError;
+//use models::expr::Expr;
+//
 
-impl<'a> Expr<'a> {
-    pub fn eval(&self, current: usize, env: &mut Environment) -> Result<Value, LoxError> {
+pub trait Eval {
+    fn eval(&self, current: usize, env: &mut Environment) -> Result<Value, LoxError>;
+    fn priv_eval(&self, env: &mut Environment) -> Result<Value, ValueError>;
+}
+
+impl<'a> Eval for Expr<'a> {
+    fn eval(&self, current: usize, env: &mut Environment) -> Result<Value, LoxError> {
         match self.priv_eval(env) {
             Ok(v) => Ok(v),
             Err(value_error) => Err(LoxError::ValueError(current, value_error)),
         }
     }
+
+    //impl<'a>
 
     fn priv_eval(&self, env: &mut Environment) -> Result<Value, ValueError> {
         match self {

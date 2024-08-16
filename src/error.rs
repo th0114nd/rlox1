@@ -1,6 +1,9 @@
-use crate::token::Token;
-use crate::token::TokenType;
-use crate::value;
+//use crate::token::Token;
+//use crate::token::TokenType;
+//use crate::value;
+use models::Token;
+use models::TokenType;
+use models::ValueError;
 use std::fmt::Display;
 use std::fmt::Write;
 use std::io;
@@ -27,7 +30,7 @@ pub enum LoxError {
     MultiError(Vec<LoxError>),
 
     #[error("[line {0}] Error: value error: {1}")]
-    ValueError(usize, value::ValueError),
+    ValueError(usize, ValueError),
 }
 
 fn join_all<T: Display>(items: &[T]) -> String {

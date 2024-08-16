@@ -1,12 +1,22 @@
-use crate::environment::Env;
-use crate::environment::Environment;
 use crate::error::LoxError;
-use crate::stmt::Stmt;
-use crate::value::Value;
+use crate::expr_eval::Eval;
+use environment::Env;
+use environment::Environment;
+use models::Stmt;
+use models::Value;
 use std::io;
 
-impl<'a> Stmt<'a> {
-    pub fn eval(
+pub trait SEval {
+    fn eval(
+        &self,
+        current: usize,
+        w: impl io::Write,
+        env: &mut Environment,
+    ) -> Result<(), LoxError>;
+}
+
+impl<'a> SEval for &Stmt<'a> {
+    fn eval(
         &self,
         current: usize,
         mut w: impl io::Write,

@@ -1,8 +1,11 @@
 use crate::error::LoxError;
-use crate::token::Token;
-use crate::token::TokenType;
-use crate::token::TokenType::*;
+//use crate::token::Token;
+//use crate::token::TokenType;
+//use crate::token::TokenType::*;
 use lazy_static::lazy_static;
+use models::Token;
+use models::TokenType;
+use models::TokenType::*;
 use std::collections::HashMap;
 use std::iter::Peekable;
 use std::mem;
@@ -180,8 +183,12 @@ impl<'a> Scanner<'a> {
     }
 
     fn string(&mut self) {
-        while let Some((_, c)) = self.chars.peek() && *c != '"' {
-            if *c == '\n' {self.line += 1}
+        while let Some((_, c)) = self.chars.peek()
+            && *c != '"'
+        {
+            if *c == '\n' {
+                self.line += 1
+            }
             self.advance();
         }
         if self.is_at_end() {
