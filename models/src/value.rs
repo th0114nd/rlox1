@@ -129,6 +129,12 @@ impl From<Value> for bool {
     }
 }
 
+impl From<&Value> for bool {
+    fn from(value: &Value) -> bool {
+        !matches!(value, VNil | Bool(false))
+    }
+}
+
 impl std::cmp::PartialOrd for Value {
     fn partial_cmp(&self, other: &Value) -> Option<std::cmp::Ordering> {
         match (self, other) {

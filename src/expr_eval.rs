@@ -56,10 +56,10 @@ impl<'a> Eval for Expr<'a> {
                 operator,
                 right,
             } => {
-                let left = bool::from(left.priv_eval(env)?);
-                match (left, operator.token) {
-                    (false, And) => Ok(Value::Bool(false)),
-                    (true, Or) => Ok(Value::Bool(true)),
+                let left = left.priv_eval(env)?;
+                match (bool::from(&left), operator.token) {
+                    (false, And) => Ok(left),
+                    (true, Or) => Ok(left),
                     (true, And) | (false, Or) => right.priv_eval(env),
                     _ => panic!("invalid logical operator '{}'", operator.lexeme),
                 }
@@ -128,6 +128,8 @@ mod tests {
     #[case("true and false", Bool(false))]
     #[case("false and true", Bool(false))]
     #[case("true and true", Bool(true))]
+    #[case("nil and hello", VNil)]
+    #[case("nil or 17", VNumber(17.0))]
     fn test_eval(#[case] input: &str, #[case] want: Value) -> LoxResult<()> {
         let mut env = Environment::default();
         let got = str_eval(input, &mut env)?;
