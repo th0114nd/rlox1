@@ -79,6 +79,14 @@ impl<'a> Eval for Expr<'a> {
                     _ => panic!("invalid operation {operator}"),
                 }
             }
+            Expr::Call { callee, arguments } => {
+                let callee: Value = callee.priv_eval(env)?;
+                let arguments: Vec<Value> = arguments
+                    .into_iter()
+                    .map(|arg| arg.priv_eval(env))
+                    .collect::<Result<Vec<Value>, ValueError>>()?;
+                todo!()
+            }
         }
     }
 }

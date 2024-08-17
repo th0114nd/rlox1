@@ -323,8 +323,44 @@ impl<'long> Parser<'long> {
                 right: Box::new(right),
             })
         } else {
-            self.primary()
+            self.call()
         }
+    }
+
+    fn arguments(&mut self) -> Result<Vec<Expr<'long>>, LoxError> {
+        if self.token_match(&[RightParen]) {
+            return Ok(vec![]);
+        }
+        let mut args = vec![];
+        loop {
+            args.push(self.expression()?);
+            if self.token_match(&[RightParen]) {
+                break;
+            }
+            self.consume(Comma, "Expected ',' between arguments")?;
+        }
+        //let mut args = vec![];
+        //while !self.token_match(&[RightParen]) {
+        //    args.push(self.expression()?);
+        //    self.consume(Comma, "Expected ',' between arguments")?;
+        //    // arg1
+        //    // comma
+        //    // arg2
+        //    // paren
+        //}
+        Ok(args)
+    }
+
+    fn call(&mut self) -> ResultExpr<'long> {
+        let mut expr = self.primary()?;
+        while self.token_match(&[LeftParen]) {
+            let arguments = self.arguments()?;
+            expr = Expr::Call {
+                callee: Box::new(expr),
+                arguments,
+            }
+        }
+        Ok(expr)
     }
 
     fn primary(&mut self) -> ResultExpr<'long> {
@@ -442,7 +478,7 @@ expr((= v#i (+ v#i 1)))
 }
 "#
     )]
-
+    #[case("f(a, 2 + 3);", "expr((v#f v#a (+ 2 3)))\n")]
     fn test_parse(#[case] input: &str, #[case] want: &str) -> Result<(), LoxError> {
         let mut scanner = Scanner::new(input);
         let tokens = scanner.scan_tokens()?;

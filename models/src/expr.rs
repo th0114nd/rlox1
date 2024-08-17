@@ -26,6 +26,10 @@ pub enum Expr<'a> {
         operator: Token<'a>,
         right: Box<Expr<'a>>,
     },
+    Call {
+        callee: Box<Expr<'a>>,
+        arguments: Vec<Expr<'a>>,
+    },
 }
 
 impl<'a> fmt::Display for Expr<'a> {
@@ -46,6 +50,13 @@ impl<'a> fmt::Display for Expr<'a> {
                 operator,
                 right,
             } => write!(f, "({} {left} {right})", operator.lexeme),
+            Expr::Call { callee, arguments } => {
+                write!(f, "({callee}")?;
+                for arg in arguments {
+                    write!(f, " {arg}")?;
+                }
+                write!(f, ")")
+            }
         }
     }
 }
