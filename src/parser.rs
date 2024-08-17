@@ -129,12 +129,12 @@ impl<'long> Parser<'long> {
     }
 
     fn block(&mut self) -> ResultStmt<'long> {
-        //let left_brace = self.previous()?;
         let mut statements = vec![];
         while !self.check(RightBrace) && !self.is_at_end() {
             let decl = self.declaration()?;
             statements.push(decl);
         }
+        self.consume(RightBrace, "Expect '}' to end block.")?;
         Ok(Stmt::Block(statements))
     }
 
@@ -300,8 +300,8 @@ mod tests {
     #[rstest::rstest]
     #[case("print 4;", "print(4)\n")]
     #[case("print nil;\ntrue;", "print(nil)\nexpr(true)\n")]
-    #[case("{}", "")]
-    #[case("{ print nil; }", "")]
+    #[case("{}", "{\n}\n\n")]
+    #[case("{ print nil; }", "{\nprint(nil)\n}\n\n")]
     fn test_parse(#[case] input: &str, #[case] want: &str) -> Result<(), LoxError> {
         let mut scanner = Scanner::new(input);
         let tokens = scanner.scan_tokens()?;

@@ -40,31 +40,12 @@ impl<'a> SEval for &Stmt<'a> {
                 env.define(token.lexeme, value);
                 Ok(())
             }
-            Stmt::Block(stmts) => {
-                //let stmt_list = StmtList(stmts)
-                env.fork(|env| {
-                    //env.push();
-                    //defer!(env.pop());
-                    //let mut result = Ok(());
-                    for (offset, s) in stmts.iter().enumerate() {
-                        //result = result.and(s.eval(current + offset + 1, w, env));
-                        s.eval(current + offset + 1, w, env)?;
-                    }
-                    //Ok::<Result<(), ValueError>>(())
-                    Ok(())
-                })
-                //env.pop();
-                //iresult
-                //result
-                //Ok(())
-                //let result = stmts
-                //    .iter()
-                //    .enumerate()
-                //    .try_for_each(|(offset, ref s)| s.eval(current + offset + 1, w, env));
-                //env.pop();
-                //result
-                //})
-            }
+            Stmt::Block(stmts) => env.fork(|env| {
+                for (offset, s) in stmts.iter().enumerate() {
+                    s.eval(current + offset + 1, w, env)?;
+                }
+                Ok(())
+            }),
         }
     }
 }
@@ -131,6 +112,46 @@ mod tests {
         assert_eq!(format!("{got}"), want);
 
         assert_eq!(std::str::from_utf8(&buf), Ok(want_stdout));
+        Ok(())
+    }
+
+    #[test]
+    fn test_local_script() -> LoxResult<()> {
+        let input = r#"
+var a = "global a";
+var b = "global b";
+var c = "global c";
+{
+  var a = "outer a";
+  var b = "outer b";
+  {
+    var a = "inner a";
+    print a;
+    print b;
+    print c;
+  }
+  print a;
+  print b;
+  print c;
+}
+print a;
+print b;
+print c;
+"#;
+
+        let want = r#"inner a
+outer b
+global c
+outer a
+outer b
+global c
+global a
+global b
+global c
+"#;
+        let mut buf = vec![];
+        let _ = str_eval(input, &mut buf)?;
+        assert_eq!(std::str::from_utf8(&buf).unwrap(), want);
         Ok(())
     }
 }
