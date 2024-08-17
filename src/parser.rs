@@ -139,6 +139,7 @@ impl<'long> Parser<'long> {
     fn for_statement(&mut self) -> ResultStmt<'long> {
         self.consume(LeftParen, "Expect '(' around condition")?;
         let line = self.previous().line;
+
         let init_stmt = if self.token_match(&[Semicolon]) {
             None
         } else if self.token_match(&[Var]) {
@@ -146,6 +147,7 @@ impl<'long> Parser<'long> {
         } else {
             Some(self.expression_statement()?)
         };
+
         let end_expr = if self.token_match(&[Semicolon]) {
             Expr::Literal(Value::Bool(true))
         } else {
@@ -153,19 +155,23 @@ impl<'long> Parser<'long> {
             self.consume(Semicolon, "Expect ';' in for condition (end)")?;
             expr
         };
-        let update_expr: Expr = if self.token_match(&[RightParen]) {
-            Expr::Literal(Value::VNil)
+
+        let update_expr = if self.token_match(&[RightParen]) {
+            None
         } else {
             let expr = self.expression()?;
             self.consume(RightParen, "Expect ')' in for condition (update)")?;
-            expr
+            Some(expr)
         };
-        let body = self.statement()?;
-        let while_stmt = Stmt::While(
-            line,
-            end_expr,
-            Box::new(Stmt::Block(vec![body, Stmt::Expr(line, update_expr)])),
-        );
+
+        let base_body = self.statement()?;
+        let body = match update_expr {
+            None => base_body,
+            Some(update_expr) => Stmt::Block(vec![base_body, Stmt::Expr(line, update_expr)]),
+        };
+
+        let while_stmt = Stmt::While(line, end_expr, Box::new(body));
+
         Ok(match init_stmt {
             None => while_stmt,
             Some(init_stmt) => Stmt::Block(vec![init_stmt, while_stmt]),
@@ -422,9 +428,6 @@ mod tests {
     #[case(
         "for (;;) {}",
         r#"(while true {
-{
-}
-expr(nil)
 })
 "#
     )]
