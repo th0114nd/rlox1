@@ -4,23 +4,25 @@ use std::fmt;
 
 #[derive(Debug)]
 pub enum Stmt<'a> {
-    Expr(Expr<'a>),
-    Print(Expr<'a>),
-    VarDecl(Token<'a>, Option<Expr<'a>>),
+    Expr(usize, Expr<'a>),
+    Print(usize, Expr<'a>),
+    VarDecl(usize, Token<'a>, Option<Expr<'a>>),
     Block(Vec<Stmt<'a>>),
     IfThenElse {
+        line: usize,
         if_expr: Expr<'a>,
         then_stmt: Box<Stmt<'a>>,
         else_stmt: Option<Box<Stmt<'a>>>,
     },
+    While(usize, Expr<'a>, Box<Stmt<'a>>),
 }
 
 impl<'a> fmt::Display for Stmt<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Stmt::Expr(expr) => write!(f, "expr({expr})"),
-            Stmt::Print(expr) => write!(f, "print({expr})"),
-            Stmt::VarDecl(token, expr) => match expr {
+            Stmt::Expr(_, expr) => write!(f, "expr({expr})"),
+            Stmt::Print(_, expr) => write!(f, "print({expr})"),
+            Stmt::VarDecl(_, token, expr) => match expr {
                 None => write!(f, "var({})", token.lexeme),
                 Some(expr) => write!(f, "var({} = {expr})", token.lexeme),
             },
@@ -32,6 +34,7 @@ impl<'a> fmt::Display for Stmt<'a> {
                 write!(f, "}}")
             }
             Stmt::IfThenElse {
+                line: _,
                 if_expr,
                 then_stmt,
                 else_stmt,
@@ -45,6 +48,7 @@ impl<'a> fmt::Display for Stmt<'a> {
                     }
                 )
             }
+            Stmt::While(_, expr, stmt) => write!(f, "(while {expr} {stmt}"),
         }
     }
 }

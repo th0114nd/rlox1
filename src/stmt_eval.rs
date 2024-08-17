@@ -7,61 +7,58 @@ use models::Value;
 use std::io;
 
 pub trait SEval {
-    fn eval(
-        &self,
-        current: usize,
-        w: &mut impl io::Write,
-        env: &mut Environment,
-    ) -> Result<(), LoxError>;
+    fn eval(&self, w: &mut impl io::Write, env: &mut Environment) -> Result<(), LoxError>;
 }
 
 impl<'a> SEval for &Stmt<'a> {
-    fn eval(
-        &self,
-        current: usize,
-        w: &mut impl io::Write,
-        env: &mut Environment,
-    ) -> Result<(), LoxError> {
+    fn eval(&self, w: &mut impl io::Write, env: &mut Environment) -> Result<(), LoxError> {
         match self {
-            Stmt::Expr(expr) => {
-                expr.eval(current, env)?;
+            Stmt::Expr(line, expr) => {
+                expr.eval(*line, env)?;
                 Ok(())
             }
-            Stmt::Print(expr) => {
-                let v = expr.eval(current, env)?;
+            Stmt::Print(line, expr) => {
+                let v = expr.eval(*line, env)?;
                 writeln!(w, "{v}").expect("writes should not fail");
                 Ok(())
             }
-            Stmt::VarDecl(token, expr) => {
+            Stmt::VarDecl(line, token, expr) => {
                 let value = match expr {
                     None => Value::VNil,
-                    Some(expr) => expr.eval(current, env)?,
+                    Some(expr) => expr.eval(*line, env)?,
                 };
                 env.define(token.lexeme, value);
                 Ok(())
             }
             Stmt::Block(stmts) => env.fork(|env| {
-                for (offset, s) in stmts.iter().enumerate() {
-                    s.eval(current + offset + 1, w, env)?;
+                for s in stmts {
+                    s.eval(w, env)?;
                 }
                 Ok(())
             }),
             Stmt::IfThenElse {
+                line,
                 if_expr,
                 then_stmt,
                 else_stmt,
             } => {
-                let cond = if_expr.eval(current, env)?;
+                let cond = if_expr.eval(*line, env)?;
                 if bool::from(cond) {
                     // why not just keep line numbers on the statements ?
-                    then_stmt.as_ref().eval(current + 1, w, env)
+                    then_stmt.as_ref().eval(w, env)
                 } else {
                     match else_stmt {
                         None => Ok(()),
                         // You're just guessing line numbers now
-                        Some(else_stmt) => else_stmt.as_ref().eval(current + 3, w, env),
+                        Some(else_stmt) => else_stmt.as_ref().eval(w, env),
                     }
                 }
+            }
+            Stmt::While(line, expr, stmt) => {
+                while bool::from(expr.eval(*line, env)?) {
+                    stmt.as_ref().eval(w, env)?;
+                }
+                Ok(())
             }
         }
     }
@@ -75,7 +72,7 @@ mod tests {
     use crate::parser::Parser;
     use crate::scanner::Scanner;
 
-    fn str_eval(input: &str, buf: &mut Vec<u8>) -> LoxResult<Vec<()>> {
+    fn str_eval(input: &str, buf: &mut Vec<u8>) -> LoxResult<()> {
         let mut scanner = Scanner::new(input);
         let tokens = scanner.scan_tokens()?;
         let mut parser = Parser::new(&tokens);
@@ -101,6 +98,7 @@ mod tests {
     #[case("if (\"hello\") print 4;", "4\n")]
     #[case("if (nil) print 4;", "")]
     #[case("if (nil) print 4; else print 3;", "3\n")]
+    #[case("var i = 0; while (i < 4) {i = i + 1; print i;}", "1\n2\n3\n4\n")]
     fn test_eval(#[case] input: &str, #[case] want_stdout: &'static str) -> LoxResult<()> {
         let mut buf = vec![];
         let _ = str_eval(input, &mut buf)?;

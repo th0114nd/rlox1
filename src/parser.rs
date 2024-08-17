@@ -106,13 +106,17 @@ impl<'long> Parser<'long> {
                 None
             };
             self.consume(Semicolon, "Expected ';' after variable declaration")?;
-            Ok(Stmt::VarDecl(lhs, rhs))
+            let line = self.previous().line;
+            Ok(Stmt::VarDecl(line, lhs, rhs))
         } else {
             self.statement()
         }
     }
 
     fn statement(&mut self) -> ResultStmt<'long> {
+        if self.token_match(&[While]) {
+            return self.while_statement();
+        }
         if self.token_match(&[If]) {
             return self.if_statement();
         }
@@ -123,6 +127,15 @@ impl<'long> Parser<'long> {
             return self.block();
         }
         self.expression_statement()
+    }
+
+    fn while_statement(&mut self) -> ResultStmt<'long> {
+        self.consume(LeftParen, "Expect '(' around condition")?;
+        let expr = self.expression()?;
+        self.consume(RightParen, "Expect ')' around condition")?;
+        let stmt = Box::new(self.statement()?);
+        let line = self.previous().line;
+        Ok(Stmt::While(line, expr, stmt))
     }
 
     fn if_statement(&mut self) -> ResultStmt<'long> {
@@ -136,7 +149,9 @@ impl<'long> Parser<'long> {
         } else {
             None
         };
+        let line = self.previous().line;
         Ok(Stmt::IfThenElse {
+            line,
             if_expr,
             then_stmt,
             else_stmt,
@@ -146,7 +161,8 @@ impl<'long> Parser<'long> {
     fn print_statement(&mut self) -> ResultStmt<'long> {
         let expr = self.expression()?;
         self.consume(Semicolon, "Expect ';' after value.")?;
-        Ok(Stmt::Print(expr))
+        let line = self.previous().line;
+        Ok(Stmt::Print(line, expr))
     }
 
     fn block(&mut self) -> ResultStmt<'long> {
@@ -162,7 +178,8 @@ impl<'long> Parser<'long> {
     fn expression_statement(&mut self) -> ResultStmt<'long> {
         let expr = self.expression()?;
         self.consume(Semicolon, "Expect ';' after value.")?;
-        Ok(Stmt::Expr(expr))
+        let line = self.previous().line;
+        Ok(Stmt::Expr(line, expr))
     }
 
     pub fn expression(&mut self) -> ResultExpr<'long> {

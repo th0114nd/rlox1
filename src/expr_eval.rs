@@ -15,15 +15,15 @@ use models::ValueError;
 //
 
 pub trait Eval {
-    fn eval(&self, current: usize, env: &mut Environment) -> Result<Value, LoxError>;
+    fn eval(&self, line: usize, env: &mut Environment) -> Result<Value, LoxError>;
     fn priv_eval(&self, env: &mut Environment) -> Result<Value, ValueError>;
 }
 
 impl<'a> Eval for Expr<'a> {
-    fn eval(&self, current: usize, env: &mut Environment) -> Result<Value, LoxError> {
+    fn eval(&self, line: usize, env: &mut Environment) -> Result<Value, LoxError> {
         match self.priv_eval(env) {
             Ok(v) => Ok(v),
-            Err(value_error) => Err(LoxError::ValueError(current, value_error)),
+            Err(value_error) => Err(LoxError::ValueError(line, value_error)),
         }
     }
 

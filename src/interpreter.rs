@@ -29,12 +29,10 @@ impl Default for Interpreter<Vec<u8>> {
 }
 
 impl<W: io::Write> Interpreter<W> {
-    pub fn interpret(&mut self, stmts: StmtList) -> LoxResult<Vec<()>> {
+    pub fn interpret(&mut self, stmts: StmtList) -> LoxResult<()> {
         stmts
             .0
             .into_iter()
-            .enumerate()
-            .map(|(current, ref s)| s.eval(current + 1, &mut self.w, &mut self.environment))
-            .collect()
+            .try_for_each(|ref s| s.eval(&mut self.w, &mut self.environment))
     }
 }
