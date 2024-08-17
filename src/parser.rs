@@ -139,12 +139,12 @@ impl<'long> Parser<'long> {
     fn for_statement(&mut self) -> ResultStmt<'long> {
         self.consume(LeftParen, "Expect '(' around condition")?;
         let line = self.previous().line;
-        let init_stmt: Stmt = if self.token_match(&[Semicolon]) {
-            Stmt::Expr(line, Expr::Literal(Value::VNil))
+        let init_stmt = if self.token_match(&[Semicolon]) {
+            None
         } else if self.token_match(&[Var]) {
-            self.var_declaration()?
+            Some(self.var_declaration()?)
         } else {
-            self.expression_statement()?
+            Some(self.expression_statement()?)
         };
         let end_expr = if self.token_match(&[Semicolon]) {
             Expr::Literal(Value::Bool(true))
@@ -161,14 +161,15 @@ impl<'long> Parser<'long> {
             expr
         };
         let body = self.statement()?;
-        Ok(Stmt::Block(vec![
-            init_stmt,
-            Stmt::While(
-                line,
-                end_expr,
-                Box::new(Stmt::Block(vec![body, Stmt::Expr(line, update_expr)])),
-            ),
-        ]))
+        let while_stmt = Stmt::While(
+            line,
+            end_expr,
+            Box::new(Stmt::Block(vec![body, Stmt::Expr(line, update_expr)])),
+        );
+        Ok(match init_stmt {
+            None => while_stmt,
+            Some(init_stmt) => Stmt::Block(vec![init_stmt, while_stmt]),
+        })
     }
 
     fn while_statement(&mut self) -> ResultStmt<'long> {
@@ -420,14 +421,11 @@ mod tests {
     #[case("true and false or 3 == 4;", "expr((or (and true false) (== 3 4)))\n")]
     #[case(
         "for (;;) {}",
-        r#"{
-expr(nil)
-(while true {
+        r#"(while true {
 {
 }
 expr(nil)
 })
-}
 "#
     )]
     #[case(
