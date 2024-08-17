@@ -113,13 +113,34 @@ impl<'long> Parser<'long> {
     }
 
     fn statement(&mut self) -> ResultStmt<'long> {
-        if self.token_match(&[Print]) {
-            self.print_statement()
-        } else if self.token_match(&[LeftBrace]) {
-            self.block()
-        } else {
-            self.expression_statement()
+        if self.token_match(&[If]) {
+            return self.if_statement();
         }
+        if self.token_match(&[Print]) {
+            return self.print_statement();
+        }
+        if self.token_match(&[LeftBrace]) {
+            return self.block();
+        }
+        self.expression_statement()
+    }
+
+    fn if_statement(&mut self) -> ResultStmt<'long> {
+        self.consume(LeftParen, "Expect '(' around condition")?;
+        let if_expr = self.expression()?;
+        self.consume(RightParen, "Expect ')' around condition")?;
+        let then_stmt = Box::new(self.declaration()?);
+
+        let else_stmt = if self.token_match(&[Else]) {
+            Some(Box::new(self.declaration()?))
+        } else {
+            None
+        };
+        Ok(Stmt::IfThenElse {
+            if_expr,
+            then_stmt,
+            else_stmt,
+        })
     }
 
     fn print_statement(&mut self) -> ResultStmt<'long> {
@@ -300,8 +321,16 @@ mod tests {
     #[rstest::rstest]
     #[case("print 4;", "print(4)\n")]
     #[case("print nil;\ntrue;", "print(nil)\nexpr(true)\n")]
-    #[case("{}", "{\n}\n\n")]
-    #[case("{ print nil; }", "{\nprint(nil)\n}\n\n")]
+    #[case("{}", "{\n}\n")]
+    #[case("{ print nil; }", "{\nprint(nil)\n}\n")]
+    #[case(
+        "if (first) if (second) var x = 1; else 2;",
+        "(if v#first (if v#second var(x = 1) expr(2)) {})\n"
+    )]
+    #[case(
+        "if (\"hello\") { 1; } else { 2; }",
+        "(if hello {\nexpr(1)\n} {\nexpr(2)\n})\n"
+    )]
     fn test_parse(#[case] input: &str, #[case] want: &str) -> Result<(), LoxError> {
         let mut scanner = Scanner::new(input);
         let tokens = scanner.scan_tokens()?;

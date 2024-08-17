@@ -8,6 +8,11 @@ pub enum Stmt<'a> {
     Print(Expr<'a>),
     VarDecl(Token<'a>, Option<Expr<'a>>),
     Block(Vec<Stmt<'a>>),
+    IfThenElse {
+        if_expr: Expr<'a>,
+        then_stmt: Box<Stmt<'a>>,
+        else_stmt: Option<Box<Stmt<'a>>>,
+    },
 }
 
 impl<'a> fmt::Display for Stmt<'a> {
@@ -24,7 +29,21 @@ impl<'a> fmt::Display for Stmt<'a> {
                 for stmt in stmts {
                     writeln!(f, "{stmt}")?;
                 }
-                writeln!(f, "}}")
+                write!(f, "}}")
+            }
+            Stmt::IfThenElse {
+                if_expr,
+                then_stmt,
+                else_stmt,
+            } => {
+                write!(
+                    f,
+                    "(if {if_expr} {then_stmt} {})",
+                    match else_stmt {
+                        None => "{}".to_owned(),
+                        Some(stmt) => format!("{stmt}"),
+                    }
+                )
             }
         }
     }

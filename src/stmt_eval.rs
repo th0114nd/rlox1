@@ -46,6 +46,23 @@ impl<'a> SEval for &Stmt<'a> {
                 }
                 Ok(())
             }),
+            Stmt::IfThenElse {
+                if_expr,
+                then_stmt,
+                else_stmt,
+            } => {
+                let cond = if_expr.eval(current, env)?;
+                if bool::from(cond) {
+                    // why not just keep line numbers on the statements ?
+                    then_stmt.as_ref().eval(current + 1, w, env)
+                } else {
+                    match else_stmt {
+                        None => Ok(()),
+                        // You're just guessing line numbers now
+                        Some(else_stmt) => else_stmt.as_ref().eval(current + 3, w, env),
+                    }
+                }
+            }
         }
     }
 }
@@ -72,23 +89,21 @@ mod tests {
     }
 
     #[rstest::rstest]
-    #[case("nil;", vec![()], "")]
-    #[case("print nil;", vec![()], "nil\n")]
-    #[case("print nil;\ntrue;", vec![(), ()], "nil\n")]
-    #[case("true;", vec![()], "")]
-    #[case("print 3 + 4; 10;", vec![(), ()], "7\n")]
-    #[case("print 3 + 4; print \"hello\";", vec![(), ()], "7\nhello\n")]
-    #[case("var x = 17; print x; var x = nil; print x;", vec![(), (), (), ()],"17\nnil\n")]
-    #[case("var x = 17; var y = 13; x = y = 4; print x * y;", vec![(), (), (), ()],"16\n")]
-    #[case("var x = 17; print x; x = nil; print x;", vec![(), (), (), ()],"17\nnil\n")]
-    fn test_eval(
-        #[case] input: &str,
-        #[case] want: Vec<()>,
-        #[case] want_stdout: &'static str,
-    ) -> LoxResult<()> {
+    #[case("nil;", "")]
+    #[case("print nil;", "nil\n")]
+    #[case("print nil;\ntrue;", "nil\n")]
+    #[case("true;", "")]
+    #[case("print 3 + 4; 10;", "7\n")]
+    #[case("print 3 + 4; print \"hello\";", "7\nhello\n")]
+    #[case("var x = 17; print x; var x = nil; print x;", "17\nnil\n")]
+    #[case("var x = 17; var y = 13; x = y = 4; print x * y;", "16\n")]
+    #[case("var x = 17; print x; x = nil; print x;", "17\nnil\n")]
+    #[case("if (\"hello\") print 4;", "4\n")]
+    #[case("if (nil) print 4;", "")]
+    #[case("if (nil) print 4; else print 3;", "3\n")]
+    fn test_eval(#[case] input: &str, #[case] want_stdout: &'static str) -> LoxResult<()> {
         let mut buf = vec![];
-        let got = str_eval(input, &mut buf)?;
-        assert_eq!(got, want);
+        let _ = str_eval(input, &mut buf)?;
 
         assert_eq!(std::str::from_utf8(&buf), Ok(want_stdout));
         Ok(())
