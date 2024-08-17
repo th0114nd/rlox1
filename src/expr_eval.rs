@@ -51,6 +51,19 @@ impl<'a> Eval for Expr<'a> {
                     _ => panic!("invalid unary operator '{}'", operator.lexeme),
                 }
             }
+            Expr::Logical {
+                left,
+                operator,
+                right,
+            } => {
+                let left = bool::from(left.priv_eval(env)?);
+                match (left, operator.token) {
+                    (false, And) => Ok(Value::Bool(false)),
+                    (true, Or) => Ok(Value::Bool(true)),
+                    (true, And) | (false, Or) => right.priv_eval(env),
+                    _ => panic!("invalid logical operator '{}'", operator.lexeme),
+                }
+            }
             Expr::Binary {
                 left,
                 operator,
@@ -107,6 +120,14 @@ mod tests {
     #[case("!nil", Bool(true))]
     #[case("0 - -7", VNumber(7.0))]
     #[case(r#""lox" == "lo" + "x""#, Bool(true))]
+    #[case("false or false", Bool(false))]
+    #[case("true or false", Bool(true))]
+    #[case("false or true", Bool(true))]
+    #[case("true or true", Bool(true))]
+    #[case("false and false", Bool(false))]
+    #[case("true and false", Bool(false))]
+    #[case("false and true", Bool(false))]
+    #[case("true and true", Bool(true))]
     fn test_eval(#[case] input: &str, #[case] want: Value) -> LoxResult<()> {
         let mut env = Environment::default();
         let got = str_eval(input, &mut env)?;

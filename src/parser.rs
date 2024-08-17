@@ -188,8 +188,27 @@ impl<'long> Parser<'long> {
         Ok(expr)
     }
 
+    fn bin_logic_op(
+        &mut self,
+        token_types: &'static [TokenType],
+        mut next_op: impl FnMut(&mut Self) -> ResultExpr<'long>,
+    ) -> ResultExpr<'long> {
+        let mut expr = next_op(self)?;
+
+        while self.token_match(token_types) {
+            let operator = self.previous();
+            let right = next_op(self)?;
+            expr = Expr::Logical {
+                left: Box::new(expr),
+                operator,
+                right: Box::new(right),
+            }
+        }
+        Ok(expr)
+    }
+
     fn assignment(&mut self) -> ResultExpr<'long> {
-        let expr = self.equality()?;
+        let expr = self.logic_or()?;
         if self.token_match(&[Equal]) {
             let equals = self.previous();
             let value = self.assignment()?;
@@ -203,6 +222,14 @@ impl<'long> Parser<'long> {
         } else {
             Ok(expr)
         }
+    }
+
+    fn logic_or(&mut self) -> ResultExpr<'long> {
+        self.bin_logic_op(&[Or], |s| s.logic_and())
+    }
+
+    fn logic_and(&mut self) -> ResultExpr<'long> {
+        self.bin_logic_op(&[And], |s| s.equality())
     }
 
     fn equality(&mut self) -> ResultExpr<'long> {
@@ -331,6 +358,7 @@ mod tests {
         "if (\"hello\") { 1; } else { 2; }",
         "(if hello {\nexpr(1)\n} {\nexpr(2)\n})\n"
     )]
+    #[case("true and false or 3 == 4;", "expr((or (and true false) (== 3 4)))\n")]
     fn test_parse(#[case] input: &str, #[case] want: &str) -> Result<(), LoxError> {
         let mut scanner = Scanner::new(input);
         let tokens = scanner.scan_tokens()?;

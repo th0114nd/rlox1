@@ -21,6 +21,11 @@ pub enum Expr<'a> {
         operator: Token<'a>,
         right: Box<Expr<'a>>,
     },
+    Logical {
+        left: Box<Expr<'a>>,
+        operator: Token<'a>,
+        right: Box<Expr<'a>>,
+    },
 }
 
 impl<'a> fmt::Display for Expr<'a> {
@@ -32,6 +37,11 @@ impl<'a> fmt::Display for Expr<'a> {
             Expr::Grouping(gr) => write!(f, "(group {})", gr),
             Expr::Unary { operator, right } => write!(f, "({} {right})", operator.lexeme),
             Expr::Binary {
+                left,
+                operator,
+                right,
+            } => write!(f, "({} {left} {right})", operator.lexeme),
+            Expr::Logical {
                 left,
                 operator,
                 right,
