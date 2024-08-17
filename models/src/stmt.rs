@@ -48,7 +48,7 @@ impl<'a> fmt::Display for Stmt<'a> {
                     }
                 )
             }
-            Stmt::While(_, expr, stmt) => write!(f, "(while {expr} {stmt}"),
+            Stmt::While(_, expr, stmt) => write!(f, "(while {expr} {stmt})"),
         }
     }
 }

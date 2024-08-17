@@ -1,18 +1,10 @@
-//use crate::environment::Env;
-//use crate::environment::Environment;
 use crate::error::LoxError;
 use environment::Env;
 use environment::Environment;
-//use crate::expr::Expr;
-//use crate::token::TokenType::*;
-//use crate::value::Value;
-//use crate::value::ValueError;
 use models::Expr;
 use models::TokenType::*;
 use models::Value;
 use models::ValueError;
-//use models::expr::Expr;
-//
 
 pub trait Eval {
     fn eval(&self, line: usize, env: &mut Environment) -> Result<Value, LoxError>;
@@ -47,7 +39,7 @@ impl<'a> Eval for Expr<'a> {
                 match operator.token {
                     Minus => -right,
                     Bang => Ok(Value::Bool(!bool::from(right))),
-                    // ok to panic -- should never happen if written correctly
+                    // ok to panic -- we should never parse a different unary op
                     _ => panic!("invalid unary operator '{}'", operator.lexeme),
                 }
             }
@@ -61,6 +53,7 @@ impl<'a> Eval for Expr<'a> {
                     (false, And) => Ok(left),
                     (true, Or) => Ok(left),
                     (true, And) | (false, Or) => right.priv_eval(env),
+                    // ok to panic -- we should never parse a different logical op
                     _ => panic!("invalid logical operator '{}'", operator.lexeme),
                 }
             }
@@ -82,7 +75,7 @@ impl<'a> Eval for Expr<'a> {
                     LessEqual => Ok(Value::Bool(left <= right)),
                     Greater => Ok(Value::Bool(left > right)),
                     GreaterEqual => Ok(Value::Bool(left >= right)),
-                    // ok to panic -- should never happen if written correctly
+                    // ok to panic -- we should never parse a different binary op
                     _ => panic!("invalid operation {operator}"),
                 }
             }

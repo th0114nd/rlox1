@@ -6,6 +6,7 @@ use models::StmtList;
 use models::Token;
 use models::TokenType;
 use models::TokenType::*;
+use models::Value;
 use std::mem;
 
 type ResultExpr<'a> = LoxResult<Expr<'a>>;
@@ -98,35 +99,76 @@ impl<'long> Parser<'long> {
 
     fn declaration(&mut self) -> ResultStmt<'long> {
         if self.token_match(&[Var]) {
-            self.consume(Identifier, "expected identifier in declaration")?;
-            let lhs = self.previous();
-            let rhs: Option<Expr<'long>> = if self.token_match(&[Equal]) {
-                Some(self.expression()?)
-            } else {
-                None
-            };
-            self.consume(Semicolon, "Expected ';' after variable declaration")?;
-            let line = self.previous().line;
-            Ok(Stmt::VarDecl(line, lhs, rhs))
+            self.var_declaration()
         } else {
             self.statement()
         }
     }
+    fn var_declaration(&mut self) -> ResultStmt<'long> {
+        self.consume(Identifier, "expected identifier in declaration")?;
+        let lhs = self.previous();
+        let rhs: Option<Expr<'long>> = if self.token_match(&[Equal]) {
+            Some(self.expression()?)
+        } else {
+            None
+        };
+        self.consume(Semicolon, "Expected ';' after variable declaration")?;
+        let line = self.previous().line;
+        Ok(Stmt::VarDecl(line, lhs, rhs))
+    }
 
     fn statement(&mut self) -> ResultStmt<'long> {
+        if self.token_match(&[For]) {
+            return self.for_statement();
+        }
         if self.token_match(&[While]) {
             return self.while_statement();
         }
-        if self.token_match(&[If]) {
-            return self.if_statement();
-        }
         if self.token_match(&[Print]) {
             return self.print_statement();
+        }
+        if self.token_match(&[If]) {
+            return self.if_statement();
         }
         if self.token_match(&[LeftBrace]) {
             return self.block();
         }
         self.expression_statement()
+    }
+
+    fn for_statement(&mut self) -> ResultStmt<'long> {
+        self.consume(LeftParen, "Expect '(' around condition")?;
+        let line = self.previous().line;
+        let init_stmt: Stmt = if self.token_match(&[Semicolon]) {
+            Stmt::Expr(line, Expr::Literal(Value::VNil))
+        } else if self.token_match(&[Var]) {
+            self.var_declaration()?
+        } else {
+            self.expression_statement()?
+        };
+        let end_expr = if self.token_match(&[Semicolon]) {
+            Expr::Literal(Value::Bool(true))
+        } else {
+            let expr = self.expression()?;
+            self.consume(Semicolon, "Expect ';' in for condition (end)")?;
+            expr
+        };
+        let update_expr: Expr = if self.token_match(&[RightParen]) {
+            Expr::Literal(Value::VNil)
+        } else {
+            let expr = self.expression()?;
+            self.consume(RightParen, "Expect ')' in for condition (update)")?;
+            expr
+        };
+        let body = self.statement()?;
+        Ok(Stmt::Block(vec![
+            init_stmt,
+            Stmt::While(
+                line,
+                end_expr,
+                Box::new(Stmt::Block(vec![body, Stmt::Expr(line, update_expr)])),
+            ),
+        ]))
     }
 
     fn while_statement(&mut self) -> ResultStmt<'long> {
@@ -376,6 +418,30 @@ mod tests {
         "(if hello {\nexpr(1)\n} {\nexpr(2)\n})\n"
     )]
     #[case("true and false or 3 == 4;", "expr((or (and true false) (== 3 4)))\n")]
+    #[case(
+        "for (;;) {}",
+        r#"{
+expr(nil)
+(while true {
+{
+}
+expr(nil)
+})
+}
+"#
+    )]
+    #[case(
+        "for (var i = 0; i < 10; i = i + 1) print i;",
+        r#"{
+var(i = 0)
+(while (< v#i 10) {
+print(v#i)
+expr((= v#i (+ v#i 1)))
+})
+}
+"#
+    )]
+
     fn test_parse(#[case] input: &str, #[case] want: &str) -> Result<(), LoxError> {
         let mut scanner = Scanner::new(input);
         let tokens = scanner.scan_tokens()?;
