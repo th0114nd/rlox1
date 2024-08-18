@@ -1,9 +1,11 @@
+use crate::callable::LoxFunction;
 use crate::environment::Env;
 use crate::error::LoxError;
 use crate::interpreter::Interpreter;
 use crate::models::Stmt;
 use crate::models::Value;
 use std::io::Write;
+use std::rc::Rc;
 
 impl<'a> Interpreter {
     pub fn eval(&mut self, stmt: &Stmt<'a>) -> Result<(), LoxError> {
@@ -25,7 +27,14 @@ impl<'a> Interpreter {
                 self.environment.define(token.lexeme, value);
                 Ok(())
             }
-            Stmt::FunDecl { .. } => todo!(),
+            Stmt::FunDecl(fun_decl) => {
+                let f = LoxFunction(fun_decl.clone());
+                use crate::callable::LoxCallable;
+                let f_rc: Rc<dyn LoxCallable + 'a> = Rc::new(f);
+                let callable = Value::Callable(f_rc);
+                self.environment.define(fun_decl.name.lexeme, callable);
+                Ok(())
+            }
             Stmt::Block(stmts) => {
                 self.environment.push();
                 let mut result = Ok(());
@@ -175,6 +184,21 @@ global c
         str_eval(input, &mut buf)?;
         let got_utf8 = std::str::from_utf8(&buf).unwrap();
         assert_eq!(&got_utf8[0..4], "1723");
+        Ok(())
+    }
+
+    #[test]
+    fn test_define_action() -> LoxResult<()> {
+        let input = r#"
+fun f(a, b) {
+    print a + b;
+}
+f("hello", "world");
+"#;
+        let mut buf = vec![];
+        str_eval(input, &mut buf)?;
+        let got_utf8 = std::str::from_utf8(&buf).unwrap();
+        assert_eq!(got_utf8, "helloworld");
         Ok(())
     }
 }

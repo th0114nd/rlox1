@@ -1,18 +1,22 @@
 use crate::models::Expr;
 use crate::models::Token;
 use std::fmt;
+use std::rc::Rc;
+
+#[derive(Debug, Clone)]
+pub struct FunDecl<'a> {
+    pub line: usize,
+    pub name: Token<'a>,
+    pub parameters: Vec<Token<'a>>,
+    pub body: Rc<Stmt<'a>>,
+}
 
 #[derive(Debug)]
 pub enum Stmt<'a> {
     Expr(usize, Expr<'a>),
     Print(usize, Expr<'a>),
     VarDecl(usize, Token<'a>, Option<Expr<'a>>),
-    FunDecl {
-        line: usize,
-        name: Token<'a>,
-        parameters: Vec<Token<'a>>,
-        body: Box<Stmt<'a>>,
-    },
+    FunDecl(FunDecl<'a>),
     Block(Vec<Stmt<'a>>),
     IfThenElse {
         line: usize,
@@ -55,12 +59,12 @@ impl<'a> fmt::Display for Stmt<'a> {
                 )
             }
             Stmt::While(_, expr, stmt) => write!(f, "(while {expr} {stmt})"),
-            Stmt::FunDecl {
+            Stmt::FunDecl(FunDecl {
                 line: _,
                 name,
                 parameters,
                 body,
-            } => {
+            }) => {
                 write!(f, "(defn {} '(", name.lexeme)?;
                 for (i, parameter) in parameters.into_iter().enumerate() {
                     if i > 0 {

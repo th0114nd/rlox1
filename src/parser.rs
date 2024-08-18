@@ -1,6 +1,7 @@
 use crate::error::LoxError;
 use crate::error::LoxResult;
 use crate::models::Expr;
+use crate::models::FunDecl;
 use crate::models::Stmt;
 use crate::models::StmtList;
 use crate::models::Token;
@@ -114,13 +115,13 @@ impl<'long> Parser<'long> {
         self.consume(LeftParen, "Expected '(' to start parameter list")?;
         let parameters = self.parameters()?;
         self.consume(LeftBrace, "Expected '{' to start function body")?;
-        let body = Box::new(self.block()?);
-        Ok(Stmt::FunDecl {
+        let body = self.block()?.into();
+        Ok(Stmt::FunDecl(FunDecl {
             line,
             name,
             parameters,
             body,
-        })
+        }))
     }
 
     fn var_declaration(&mut self) -> ResultStmt<'long> {

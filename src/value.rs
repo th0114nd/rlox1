@@ -7,6 +7,9 @@ use thiserror::Error;
 
 use crate::token::TokenType;
 
+// TODO
+// MAKE TOKENS?STATEMENTS?EXPRS LIVE FOREVER AND STOP FIGHTING THE CHECKER
+//
 #[derive(Debug, Error, PartialEq)]
 pub enum ValueError {
     #[error("type mismatch: {0} vs {1}")]
@@ -30,7 +33,7 @@ pub enum Value {
     Bool(bool),
     VNumber(f64),
     VString(String),
-    Callable(Rc<dyn LoxCallable>),
+    Callable(Box<dyn LoxCallable>),
     //Object(Rc<dyn AnyClass>),
 }
 
