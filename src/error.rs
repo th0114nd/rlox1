@@ -1,33 +1,88 @@
-//use crate::token::Token;
-//use crate::token::TokenType;
-//use crate::value;
 use crate::models::Token;
 use crate::models::TokenType;
-use crate::models::ValueError;
+use crate::models::Value;
+//use crate::models::ValueError;
+use compact_str::CompactString;
 use std::fmt::Display;
 use std::fmt::Write;
-use std::io;
 use thiserror::Error;
 
 pub type LoxResult<T> = Result<T, LoxError>;
 
-//
+#[derive(Debug, Error, PartialEq)]
+#[error("[line {line}] Error: {msg}")]
+pub struct ScanError {
+    pub line: usize,
+    pub msg: CompactString,
+}
+
+#[derive(Debug, Error, PartialEq)]
+pub enum ParseError {
+    #[error("[line {0}] {1}")]
+    GeneralError(usize, CompactString),
+    #[error("[line {0}] Error: unexpected eof")]
+    UnexpectedEof(usize),
+}
+
+#[derive(Debug, Error, PartialEq)]
+pub enum RuntimeError {
+    #[error("[line {line}] Error: arity mismatch {got} vs {want}")]
+    ArityMismatch {
+        line: CompactString,
+        got: usize,
+        want: usize,
+    },
+
+    #[error("[line {line}] Error: type mismatch: {lhs} vs {rhs}")]
+    TypeMismatch {
+        line: CompactString,
+        lhs: Value,
+        rhs: Value,
+    },
+
+    #[error("[line {line}] Error: division by zero")]
+    ZeroDivError { line: CompactString },
+
+    #[error("[line {line}] Error: system time error")]
+    SystemTimeError { line: CompactString },
+
+    #[error("[line {line}] Error: undefined variable: '{name}'")]
+    UndefinedVariable {
+        line: CompactString,
+        name: CompactString,
+    },
+
+    #[error("[line {line} Error: non callable called {value}")]
+    NonCallableCalled { line: CompactString, value: Value },
+
+    #[error("[line {line}] return {value}(not an error!)")]
+    Return { line: CompactString, value: Value },
+
+    #[error("[line {line}] break (not an error!)")]
+    Break { line: CompactString },
+}
+
+use std::io;
 
 #[derive(Debug, Error, PartialEq)]
 pub enum LoxError {
-    #[error("[line {0}] Error: {1}")]
-    ScanError(usize, String),
-
-    #[error("{0}")]
-    ParseError(String),
-    #[error("[line {0}] Error: unexpected eof")]
-    UnexpectedEof(usize),
+    #[error("{}", join_all(.0))]
+    ScanErrors(Vec<ScanError>),
 
     #[error("{}", join_all(.0))]
-    MultiError(Vec<LoxError>),
+    ParseErrors(Vec<ParseError>),
 
-    #[error("[line {0}] Error: value error: {1}")]
-    ValueError(usize, ValueError),
+    #[error("{0}")]
+    RuntimeError(#[from] RuntimeError),
+}
+
+#[derive(Debug, Error)]
+pub enum MainError {
+    #[error("io error: {0}")]
+    IoError(#[from] io::Error),
+
+    #[error(transparent)]
+    LoxError(#[from] LoxError),
 }
 
 fn join_all<T: Display>(items: &[T]) -> String {
@@ -41,24 +96,34 @@ fn join_all<T: Display>(items: &[T]) -> String {
     out
 }
 
-impl<S: AsRef<str>> From<(Token, S)> for LoxError {
-    fn from((token, msg): (Token, S)) -> LoxError {
+impl<S: AsRef<str>> From<(Token, S)> for ParseError {
+    fn from((token, msg): (Token, S)) -> ParseError {
         let r#where = if token.token == TokenType::Eof {
             "end".to_owned()
         } else {
             format!("'{}'", token.lexeme)
         };
-        LoxError::ParseError(format!(
-            "[line {}] Error at {}: {}",
+        ParseError::GeneralError(
             token.line,
-            r#where,
-            msg.as_ref(),
-        ))
+            format!("Error at {}: {}", r#where, msg.as_ref()).into(),
+        )
     }
 }
 
-impl From<Vec<LoxError>> for LoxError {
-    fn from(vec: Vec<LoxError>) -> LoxError {
-        LoxError::MultiError(vec)
+impl From<Vec<ParseError>> for LoxError {
+    fn from(vec_errs: Vec<ParseError>) -> LoxError {
+        LoxError::ParseErrors(vec_errs)
     }
 }
+
+impl From<Vec<ScanError>> for LoxError {
+    fn from(vec_errs: Vec<ScanError>) -> LoxError {
+        LoxError::ScanErrors(vec_errs)
+    }
+}
+
+//impl From<Vec<LoxError>> for LoxError {
+//    fn from(vec: Vec<LoxError>) -> LoxError {
+//        LoxError::MultiError(vec)
+//    }
+//}

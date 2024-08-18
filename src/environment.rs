@@ -1,13 +1,14 @@
 use crate::models::Value;
-use crate::models::ValueError;
+//use crate::models::RuntimeError;
+use crate::error::RuntimeError;
 use compact_str::CompactString;
 use std::collections::hash_map::RawEntryMut;
 use std::collections::HashMap;
 
 pub trait Env {
-    fn get(&self, name: &str) -> Result<&Value, ValueError>;
+    fn get(&self, name: &str) -> Result<&Value, RuntimeError>;
     fn define(&mut self, name: &str, value: Value);
-    fn assign(&mut self, name: &str, value: Value) -> Result<(), ValueError>;
+    fn assign(&mut self, name: &str, value: Value) -> Result<(), RuntimeError>;
 }
 
 pub struct Environment {
@@ -40,13 +41,16 @@ impl Environment {
 }
 
 impl Env for Environment {
-    fn get(&self, name: &str) -> Result<&Value, ValueError> {
+    fn get(&self, name: &str) -> Result<&Value, RuntimeError> {
         for env in self.stack.iter().rev() {
             if let Some(value) = env.get(name) {
                 return Ok(value);
             }
         }
-        Err(ValueError::UndefinedVariable(name.to_owned()))
+        Err(RuntimeError::UndefinedVariable {
+            line: "TODO".into(),
+            name: name.into(),
+        })
     }
 
     fn define(&mut self, name: &str, value: Value) {
@@ -66,7 +70,7 @@ impl Env for Environment {
         }
     }
 
-    fn assign(&mut self, name: &str, value: Value) -> Result<(), ValueError> {
+    fn assign(&mut self, name: &str, value: Value) -> Result<(), RuntimeError> {
         for env in self.stack.iter_mut().rev() {
             let raw_entry = env.raw_entry_mut().from_key(name);
             match raw_entry {
@@ -77,7 +81,10 @@ impl Env for Environment {
                 RawEntryMut::Vacant(_) => continue,
             }
         }
-        Err(ValueError::UndefinedVariable(name.to_owned()))
+        Err(RuntimeError::UndefinedVariable {
+            line: "TODO".into(),
+            name: name.into(),
+        })
     }
 }
 
@@ -92,12 +99,18 @@ mod tests {
 
         assert_eq!(
             env.get("hello"),
-            Err(ValueError::UndefinedVariable("hello".to_owned())),
+            Err(RuntimeError::UndefinedVariable {
+                line: "TODO".into(),
+                name: "hello".into()
+            }),
         );
 
         assert_eq!(
             env.assign("hello", Bool(true)),
-            Err(ValueError::UndefinedVariable("hello".to_owned())),
+            Err(RuntimeError::UndefinedVariable {
+                line: "TODO".into(),
+                name: "hello".into()
+            }),
         );
 
         env.define("hello", VNumber(95.3));
@@ -110,17 +123,23 @@ mod tests {
     }
 
     #[test]
-    fn test_list() -> Result<(), ValueError> {
+    fn test_list() -> Result<(), RuntimeError> {
         let mut env = Environment::default();
 
         assert_eq!(
             env.get("hello"),
-            Err(ValueError::UndefinedVariable("hello".to_owned())),
+            Err(RuntimeError::UndefinedVariable {
+                line: "TODO".into(),
+                name: "hello".into()
+            }),
         );
 
         assert_eq!(
             env.assign("hello", Bool(true)),
-            Err(ValueError::UndefinedVariable("hello".to_owned())),
+            Err(RuntimeError::UndefinedVariable {
+                line: "TODO".into(),
+                name: "hello".into()
+            }),
         );
 
         env.define("hello", VNumber(95.3));
@@ -144,7 +163,7 @@ mod tests {
             // Overrides locally
             env.assign("hello", VNumber(13.0))?;
             assert_eq!(env.get("hello"), Ok(&VNumber(13.0)));
-            Ok::<(), ValueError>(())
+            Ok::<(), RuntimeError>(())
         })?;
 
         // child update persisted

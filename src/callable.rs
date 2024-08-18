@@ -1,23 +1,23 @@
 use crate::environment::Env;
+use crate::error::RuntimeError;
 use crate::interpreter::Interpreter;
 use crate::value::Value;
 use std::fmt;
 use std::time;
-use thiserror::Error;
 
-#[derive(Debug, Error, PartialEq)]
-pub enum CallError {
-    #[error("arity mismatch")]
-    ArityMismatch(usize, usize),
-    #[error("system time error")]
-    SystemTimeError,
-    #[error("not callable: {0}")]
-    NonCallableCalled(String),
-}
+//#[derive(Debug, Error, PartialEq)]
+//pub enum CallError {
+//    #[error("arity mismatch")]
+//    ArityMismatch(usize, usize),
+//    #[error("system time error")]
+//    SystemTimeError,
+//    #[error("not callable: {0}")]
+//    NonCallableCalled(String),
+//}
 
 pub trait LoxCallable: fmt::Display + fmt::Debug {
     fn arity(&self) -> usize;
-    fn call(&self, interpreter: &mut Interpreter, args: Vec<Value>) -> Result<Value, CallError>;
+    fn call(&self, interpreter: &mut Interpreter, args: Vec<Value>) -> Result<Value, RuntimeError>;
 }
 
 #[derive(Debug)]
@@ -34,11 +34,17 @@ impl LoxCallable for Clock {
         0
     }
 
-    fn call(&self, _interpreter: &mut Interpreter, _args: Vec<Value>) -> Result<Value, CallError> {
+    fn call(
+        &self,
+        _interpreter: &mut Interpreter,
+        _args: Vec<Value>,
+    ) -> Result<Value, RuntimeError> {
         let now = time::SystemTime::now();
-        let elapsed = now
-            .duration_since(time::UNIX_EPOCH)
-            .or(Err(CallError::SystemTimeError))?;
+        let elapsed =
+            now.duration_since(time::UNIX_EPOCH)
+                .or(Err(RuntimeError::SystemTimeError {
+                    line: "TODO".into(),
+                }))?;
         Ok(Value::VNumber(elapsed.as_secs_f64()))
     }
 }
@@ -58,7 +64,7 @@ impl LoxCallable for LoxFunction {
         self.0.parameters.len()
     }
 
-    fn call(&self, interpreter: &mut Interpreter, args: Vec<Value>) -> Result<Value, CallError> {
+    fn call(&self, interpreter: &mut Interpreter, args: Vec<Value>) -> Result<Value, RuntimeError> {
         interpreter.environment.push();
         for (param, arg) in self.0.parameters.iter().zip(args) {
             interpreter.environment.define(&param.lexeme, arg);

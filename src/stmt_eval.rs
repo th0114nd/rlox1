@@ -80,6 +80,7 @@ mod tests {
     use crate::interpreter::Interpreter;
     use crate::parser::Parser;
     use crate::scanner::Scanner;
+    use std::str::from_utf8;
     //use std::rc::Rc;
 
     fn str_eval(input: &str, buf: &mut Vec<u8>) -> LoxResult<()> {
@@ -112,17 +113,17 @@ mod tests {
         let mut buf = vec![];
         str_eval(input, &mut buf)?;
 
-        assert_eq!(std::str::from_utf8(&buf), Ok(want_stdout));
+        assert_eq!(from_utf8(&buf), Ok(want_stdout));
         Ok(())
     }
 
     #[rstest::rstest]
     #[case(
         "print nil;\n 4 + \"lox\";\n 2 + \"oops\";",
-        "[line 2] Error: value error: type mismatch: 4 vs lox",
+        "[line TODO] Error: type mismatch: 4 vs lox",
         "nil\n"
     )]
-    #[case("x = 4;", "[line 1] Error: value error: undefined variable: 'x'", "")]
+    #[case("x = 4;", "[line TODO] Error: undefined variable: 'x'", "")]
     fn test_eval_error(
         #[case] input: &str,
         #[case] want: &str,
@@ -133,7 +134,7 @@ mod tests {
 
         assert_eq!(format!("{got}"), want);
 
-        assert_eq!(std::str::from_utf8(&buf), Ok(want_stdout));
+        assert_eq!(from_utf8(&buf), Ok(want_stdout));
         Ok(())
     }
 
@@ -173,7 +174,7 @@ global c
 "#;
         let mut buf = vec![];
         str_eval(input, &mut buf)?;
-        assert_eq!(std::str::from_utf8(&buf).unwrap(), want);
+        assert_eq!(from_utf8(&buf).unwrap(), want);
         Ok(())
     }
 
@@ -182,7 +183,7 @@ global c
         let input = "print clock();";
         let mut buf = vec![];
         str_eval(input, &mut buf)?;
-        let got_utf8 = std::str::from_utf8(&buf).unwrap();
+        let got_utf8 = from_utf8(&buf).unwrap();
         assert_eq!(&got_utf8[0..2], "17");
         Ok(())
     }
@@ -197,8 +198,45 @@ f("hello", "world");
 "#;
         let mut buf = vec![];
         str_eval(input, &mut buf)?;
-        let got_utf8 = std::str::from_utf8(&buf).unwrap();
+        let got_utf8 = from_utf8(&buf).unwrap();
         assert_eq!(got_utf8, "helloworld\n");
+        Ok(())
+    }
+
+    #[test]
+    fn test_return() -> LoxResult<()> {
+        let input = r#"
+fun plus(a, b) {
+    return a + b;
+}
+print plus("hello", "world");
+"#;
+        let mut buf = vec![];
+        str_eval(input, &mut buf)?;
+        let got_utf8 = from_utf8(&buf).unwrap();
+        assert_eq!(got_utf8, "helloworld\n");
+        Ok(())
+    }
+
+    #[test]
+    fn test_closure() -> LoxResult<()> {
+        let input = r#"
+fun makeCounter() {
+    var i = 0;
+    fun counter() {
+        i = i + 1;
+        return i;
+    }
+    return counter;
+}
+var count = makeCounter()
+print count();
+print count();
+"#;
+        let mut buf = vec![];
+        str_eval(input, &mut buf)?;
+        let got_utf8 = from_utf8(&buf).unwrap();
+        assert_eq!(got_utf8, "1\n2\n");
         Ok(())
     }
 }

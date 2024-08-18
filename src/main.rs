@@ -21,21 +21,20 @@ mod stmt_eval;
 mod token;
 mod value;
 
-use crate::error::LoxError;
-use crate::error::LoxResult;
+use crate::error::MainError;
 use crate::interpreter::Interpreter;
 use crate::parser::Parser;
 use crate::scanner::Scanner;
 
-use thiserror::Error;
+//use thiserror::Error;
 
-#[derive(Debug, Error)]
-enum MainError {
-    #[error("io error: {0}")]
-    IoError(#[from] io::Error),
-    #[error("runtime error: {0}")]
-    LoxError(#[from] LoxError),
-}
+//#[derive(Debug, Error)]
+//enum MainError {
+//    #[error("io error: {0}")]
+//    IoError(#[from] io::Error),
+//    #[error("runtime error: {0}")]
+//    MainError(#[from] MainError),
+//}
 
 type MainResult = Result<(), MainError>;
 

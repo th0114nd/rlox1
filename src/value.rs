@@ -1,31 +1,16 @@
-use crate::callable::CallError;
+//use crate::callable::CallError;
 use crate::callable::LoxCallable;
+use crate::error::RuntimeError;
 use compact_str::CompactString;
 use std::convert::TryFrom;
 use std::fmt;
 use std::rc::Rc;
-use thiserror::Error;
 
 use crate::token::TokenType;
 
-// TODO
-// MAKE TOKENS?STATEMENTS?EXPRS LIVE FOREVER AND STOP FIGHTING THE CHECKER
-//
-#[derive(Debug, Error, PartialEq)]
-pub enum ValueError {
-    #[error("type mismatch: {0} vs {1}")]
-    TypeMismatch(Value, Value),
-    #[error("zero division error")]
-    ZeroDivError,
-    #[error("undefined variable: '{0}'")]
-    UndefinedVariable(String),
-    #[error("call error: '{0}'")]
-    CallError(#[from] CallError),
-}
+type OpOutput = Result<Value, RuntimeError>;
 
-type OpOutput = Result<Value, ValueError>;
-
-pub trait AnyClass: fmt::Display + fmt::Debug {}
+//pub trait AnyClass: fmt::Display + fmt::Debug {}
 
 #[derive(Debug, Clone, Default)]
 pub enum Value {
@@ -54,13 +39,17 @@ impl fmt::Display for Value {
 }
 
 impl TryFrom<Value> for f64 {
-    type Error = ValueError;
+    type Error = RuntimeError;
 
     fn try_from(value: Value) -> Result<f64, Self::Error> {
         if let VNumber(x) = value {
             Ok(x)
         } else {
-            Err(ValueError::TypeMismatch(value, VNumber(1197.9)))
+            Err(RuntimeError::TypeMismatch {
+                line: "TODO".into(),
+                lhs: value,
+                rhs: VNumber(1197.9),
+            })
         }
     }
 }
@@ -85,7 +74,11 @@ impl std::ops::Add for Value {
         match (self, other) {
             (VNumber(lhs), VNumber(rhs)) => Ok(VNumber(lhs + rhs)),
             (VString(lhs), VString(rhs)) => Ok(VString(lhs + &rhs)),
-            (x, y) => Err(ValueError::TypeMismatch(x, y)),
+            (lhs, rhs) => Err(RuntimeError::TypeMismatch {
+                line: "TODO".into(),
+                lhs,
+                rhs,
+            }),
         }
     }
 }
@@ -107,7 +100,9 @@ impl std::ops::Div for Value {
         let lhs = f64::try_from(self)?;
         let rhs = f64::try_from(other)?;
         if rhs == 0.0 {
-            Err(ValueError::ZeroDivError {})
+            Err(RuntimeError::ZeroDivError {
+                line: "TODO".into(),
+            })
         } else {
             Ok(VNumber(lhs / rhs))
         }

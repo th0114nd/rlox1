@@ -1,37 +1,38 @@
-use crate::callable::CallError;
+//use crate::callable::CallError;
 use crate::environment::Env;
-use crate::error::LoxError;
+use crate::error::RuntimeError;
 use crate::interpreter::Interpreter;
 use crate::models::Expr;
 use crate::models::TokenType::*;
 use crate::models::Value;
-use crate::models::ValueError;
 
 //impl<'a> Expr<'a> {
 impl Interpreter {
     //pub fn eval(&self, line: usize, env: &mut Environment) -> Result<Value, LoxError> {
-    pub fn eval_expr(&mut self, line: usize, expr: &Expr) -> Result<Value, LoxError> {
-        match self.priv_eval(expr) {
-            Ok(v) => Ok(v),
-            Err(value_error) => Err(LoxError::ValueError(line, value_error)),
-        }
+    pub fn eval_expr(&mut self, line: usize, expr: &Expr) -> Result<Value, RuntimeError> {
+        self.priv_eval(line, expr)
+        //match self.priv_eval(expr) {
+        //    Ok(v) => Ok(v),
+        //    Err(value_error) => Err(LoxError::ValueError(line, value_error)),
+        //}
     }
 
     //impl<'a>
 
     //fn priv_eval(&self, env: &mut Environment) -> Result<Value, ValueError> {
-    fn priv_eval(&mut self, expr: &Expr) -> Result<Value, ValueError> {
+    // PUT THE LINE NUMBER ON EXPR
+    fn priv_eval(&mut self, line: usize, expr: &Expr) -> Result<Value, RuntimeError> {
         match expr {
             Expr::Literal(value) => Ok(value.clone()),
             Expr::Variable(token) => self.environment.get(&token.lexeme).cloned(),
             Expr::Assign { name, value } => {
-                let right = self.priv_eval(value)?;
+                let right = self.priv_eval(line, value)?;
                 self.environment.assign(&name.lexeme, right.clone())?;
                 Ok(right)
             }
-            Expr::Grouping(expr) => self.priv_eval(expr),
+            Expr::Grouping(expr) => self.priv_eval(line, expr),
             Expr::Unary { operator, right } => {
-                let right = self.priv_eval(right)?;
+                let right = self.priv_eval(line, right)?;
                 match operator.token {
                     Minus => -right,
                     Bang => Ok(Value::Bool(!bool::from(right))),
@@ -44,11 +45,11 @@ impl Interpreter {
                 operator,
                 right,
             } => {
-                let left = self.priv_eval(left)?;
+                let left = self.priv_eval(line, left)?;
                 match (bool::from(&left), &operator.token) {
                     (false, &And) => Ok(left),
                     (true, &Or) => Ok(left),
-                    (true, &And) | (false, Or) => self.priv_eval(right),
+                    (true, &And) | (false, Or) => self.priv_eval(line, right),
                     // ok to panic -- we should never parse a different logical op
                     _ => panic!("invalid logical operator '{}'", operator.lexeme),
                 }
@@ -58,8 +59,8 @@ impl Interpreter {
                 operator,
                 right,
             } => {
-                let left = self.priv_eval(left)?;
-                let right = self.priv_eval(right)?;
+                let left = self.priv_eval(line, left)?;
+                let right = self.priv_eval(line, right)?;
                 match operator.token {
                     Plus => left + right,
                     Minus => left - right,
@@ -76,19 +77,26 @@ impl Interpreter {
                 }
             }
             Expr::Call { callee, arguments } => {
-                let callee: Value = self.priv_eval(callee)?;
+                let callee: Value = self.priv_eval(line, callee)?;
                 let arguments: Vec<Value> = arguments
                     .iter()
-                    .map(|arg| self.priv_eval(arg))
-                    .collect::<Result<Vec<Value>, ValueError>>()?;
+                    .map(|arg| self.priv_eval(line, arg))
+                    .collect::<Result<Vec<Value>, RuntimeError>>()?;
                 if let Value::Callable(callee) = callee {
                     let arity = callee.arity();
                     if arity != arguments.len() {
-                        return Err(CallError::ArityMismatch(arity, arguments.len()))?;
+                        return Err(RuntimeError::ArityMismatch {
+                            line: "TODO".into(),
+                            want: arity,
+                            got: arguments.len(),
+                        })?;
                     }
                     Ok(callee.call(self, arguments)?)
                 } else {
-                    Err(CallError::NonCallableCalled(format!("{callee}")))?
+                    Err(RuntimeError::NonCallableCalled {
+                        line: "TODO".into(),
+                        value: callee,
+                    })?
                 }
             }
         }
@@ -99,6 +107,7 @@ impl Interpreter {
 mod tests {
     use super::*;
     use crate::environment::Env;
+    use crate::error::LoxError;
     use crate::error::LoxResult;
     use crate::parser::Parser;
     use crate::scanner::Scanner;
@@ -108,8 +117,8 @@ mod tests {
         let mut scanner = Scanner::new(input);
         let tokens = scanner.scan_tokens()?;
         let mut parser = Parser::new(&tokens);
-        let expr = parser.expression()?;
-        interpreter.eval_expr(107, &expr)
+        let expr = parser.expression().map_err(|e| vec![e])?;
+        interpreter.eval_expr(107, &expr).map_err(LoxError::from)
     }
 
     #[rstest::rstest]
@@ -145,14 +154,8 @@ mod tests {
     }
 
     #[rstest::rstest]
-    #[case(
-        "4 + \"lox\"",
-        "[line 107] Error: value error: type mismatch: 4 vs lox"
-    )]
-    #[case(
-        "2 + something",
-        "[line 107] Error: value error: undefined variable: 'something'"
-    )]
+    #[case("4 + \"lox\"", "[line TODO] Error: type mismatch: 4 vs lox")]
+    #[case("2 + something", "[line TODO] Error: undefined variable: 'something'")]
     fn test_eval_error(#[case] input: &str, #[case] want: &str) -> LoxResult<()> {
         let mut interpreter = Interpreter::default();
         let got = str_eval(input, &mut interpreter).expect_err("should not evaluated");

@@ -1,4 +1,5 @@
 use crate::error::LoxError;
+use crate::error::ScanError;
 use crate::models::Token;
 use crate::models::TokenType;
 use crate::models::TokenType::*;
@@ -36,7 +37,7 @@ pub struct Scanner<'a> {
     src: &'a str,
     chars: Peekable<CharIndices<'a>>,
     tokens: Vec<Token>,
-    errors: Vec<LoxError>,
+    errors: Vec<ScanError>,
 
     start: usize,
     current: usize,
@@ -71,7 +72,7 @@ impl<'a> Scanner<'a> {
         if self.errors.is_empty() {
             Ok(mem::take(&mut self.tokens))
         } else {
-            Err(LoxError::MultiError(mem::take(&mut self.errors)))
+            Err(mem::take(&mut self.errors))?
         }
     }
 
@@ -162,7 +163,10 @@ impl<'a> Scanner<'a> {
     }
 
     fn add_error(&mut self, msg: std::string::String) {
-        self.errors.push(LoxError::ScanError(self.line, msg))
+        self.errors.push(ScanError {
+            line: self.line,
+            msg: msg.into(),
+        })
     }
 
     fn peek(&mut self) -> char {
@@ -230,6 +234,7 @@ impl<'a> Scanner<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::error::LoxError;
 
     #[rstest::rstest]
     #[case(
@@ -281,6 +286,6 @@ vec![ "(", "!=", "!", "{", "-", ")", "+", "==", "}", "=", ";", "/", ">", ">=", "
     fn test_scan_types_error(#[case] input: &str, #[case] want: &str) {
         let mut scanner = Scanner::new(input);
         let err = scanner.scan_tokens().expect_err("should fail to scan");
-        assert_eq!(format!("{}", err), want,);
+        assert_eq!(format!("{}", LoxError::from(err)), want,);
     }
 }
