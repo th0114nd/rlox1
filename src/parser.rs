@@ -49,8 +49,12 @@ impl<'long> Parser<'long> {
         *self.peek() == Eof
     }
 
-    fn previous(&self) -> &Token {
-        &self.tokens[self.current - 1]
+    fn previous(&self) -> Token {
+        self.tokens[self.current - 1].clone()
+    }
+
+    fn current_line(&self) -> usize {
+        self.tokens[self.current - 1].line
     }
 
     fn current(&self) -> &Token {
@@ -114,8 +118,8 @@ impl<'long> Parser<'long> {
 
     fn fun_declaration(&mut self) -> ResultStmt {
         self.consume(Identifier, "Expected identifier in declaration")?;
-        let name = self.previous().clone();
-        let line = name.line;
+        let name = self.previous();
+        let line = self.current_line();
         self.consume(LeftParen, "Expected '(' to start parameter list")?;
         let parameters = self.parameters()?;
         self.consume(LeftBrace, "Expected '{' to start function body")?;
@@ -130,14 +134,14 @@ impl<'long> Parser<'long> {
 
     fn var_declaration(&mut self) -> ResultStmt {
         self.consume(Identifier, "expected identifier in declaration")?;
-        let lhs = self.previous().clone();
+        let lhs = self.previous();
         let rhs: Option<Expr> = if self.token_match(&[Equal]) {
             Some(self.expression()?)
         } else {
             None
         };
         self.consume(Semicolon, "Expected ';' after variable declaration")?;
-        let line = self.previous().line;
+        let line = self.current_line();
         Ok(Stmt::VarDecl(line, lhs, rhs))
     }
 
@@ -162,7 +166,7 @@ impl<'long> Parser<'long> {
 
     fn for_statement(&mut self) -> ResultStmt {
         self.consume(LeftParen, "Expect '(' around condition")?;
-        let line = self.previous().line;
+        let line = self.current_line();
 
         let init_stmt = if self.token_match(&[Semicolon]) {
             None
@@ -207,7 +211,7 @@ impl<'long> Parser<'long> {
         let expr = self.expression()?;
         self.consume(RightParen, "Expect ')' around condition")?;
         let stmt = Box::new(self.statement()?);
-        let line = self.previous().line;
+        let line = self.current_line();
         Ok(Stmt::While(line, expr, stmt))
     }
 
@@ -222,7 +226,7 @@ impl<'long> Parser<'long> {
         } else {
             None
         };
-        let line = self.previous().line;
+        let line = self.current_line();
         Ok(Stmt::IfThenElse {
             line,
             if_expr,
@@ -234,7 +238,7 @@ impl<'long> Parser<'long> {
     fn print_statement(&mut self) -> ResultStmt {
         let expr = self.expression()?;
         self.consume(Semicolon, "Expect ';' after value.")?;
-        let line = self.previous().line;
+        let line = self.current_line();
         Ok(Stmt::Print(line, expr))
     }
 
@@ -251,7 +255,7 @@ impl<'long> Parser<'long> {
     fn expression_statement(&mut self) -> ResultStmt {
         let expr = self.expression()?;
         self.consume(Semicolon, "Expect ';' after value.")?;
-        let line = self.previous().line;
+        let line = self.current_line();
         Ok(Stmt::Expr(line, expr))
     }
 
@@ -267,7 +271,7 @@ impl<'long> Parser<'long> {
         let mut expr = next_op(self)?;
 
         while self.token_match(token_types) {
-            let operator = self.previous().clone();
+            let operator = self.previous();
             let right = next_op(self)?;
             expr = Expr::Binary {
                 left: Box::new(expr),
@@ -286,7 +290,7 @@ impl<'long> Parser<'long> {
         let mut expr = next_op(self)?;
 
         while self.token_match(token_types) {
-            let operator = self.previous().clone();
+            let operator = self.previous();
             let right = next_op(self)?;
             expr = Expr::Logical {
                 left: Box::new(expr),
@@ -300,7 +304,7 @@ impl<'long> Parser<'long> {
     fn assignment(&mut self) -> ResultExpr {
         let expr = self.logic_or()?;
         if self.token_match(&[Equal]) {
-            let equals = self.previous().clone();
+            let equals = self.previous();
             let value = self.assignment()?;
             match expr {
                 Expr::Variable(name) => Ok(Expr::Assign {
@@ -343,7 +347,7 @@ impl<'long> Parser<'long> {
 
     fn unary(&mut self) -> ResultExpr {
         if self.token_match(&[Bang, Minus]) {
-            let operator = self.previous().clone();
+            let operator = self.previous();
             let right = self.unary()?;
             Ok(Expr::Unary {
                 operator,
@@ -361,7 +365,7 @@ impl<'long> Parser<'long> {
         let mut params = vec![];
         loop {
             self.consume(Identifier, "Expected identifier for parameter")?;
-            params.push(self.previous().clone());
+            params.push(self.previous());
             if self.token_match(&[RightParen]) {
                 break;
             }
@@ -428,7 +432,7 @@ impl<'long> Parser<'long> {
             }
             Identifier => {
                 self.advance();
-                Ok(Expr::Variable(self.previous().clone()))
+                Ok(Expr::Variable(self.previous()))
             }
             _ => {
                 let token = self.tokens[self.current].clone();
@@ -441,7 +445,7 @@ impl<'long> Parser<'long> {
     fn synchronize(&mut self) {
         self.advance();
         while !self.is_at_end() {
-            if self.previous().token == Semicolon {
+            if self.tokens[self.current - 1].token == Semicolon {
                 return;
             }
             match self.peek() {
