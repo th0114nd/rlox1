@@ -1,4 +1,4 @@
-//use crate::callable::LoxCallable;
+use crate::callable::LoxCallable;
 use std::convert::TryFrom;
 use std::fmt;
 use std::rc::Rc;
@@ -27,8 +27,8 @@ pub enum Value {
     Bool(bool),
     VNumber(f64),
     VString(String),
-    //Callable(Rc<dyn LoxCallable>),
-    Object(Rc<dyn AnyClass>),
+    Callable(Box<dyn LoxCallable>),
+    //Object(Rc<dyn AnyClass>),
 }
 
 use Value::*;

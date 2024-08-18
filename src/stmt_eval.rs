@@ -1,16 +1,11 @@
 use crate::environment::Env;
-//use crate::environment::Environment;
 use crate::error::LoxError;
 use crate::interpreter::Interpreter;
 use crate::models::Stmt;
 use crate::models::Value;
-use std::io;
 use std::io::Write;
 
-// TODO: make thisa method on &mut Interpreter, so we don't need w/env as arguments
-//impl<'a> Stmt<'a> {
 impl<'a> Interpreter {
-    //pub fn eval(&self, w: &mut impl io::Write, env: &mut Environment) -> Result<(), LoxError> {
     pub fn eval(&mut self, stmt: &Stmt<'a>) -> Result<(), LoxError> {
         match stmt {
             Stmt::Expr(line, expr) => {
@@ -19,8 +14,7 @@ impl<'a> Interpreter {
             }
             Stmt::Print(line, expr) => {
                 let v = expr.eval(*line, &mut self.environment)?;
-                // TODO: self.writer()
-                writeln!(self.buffer, "{v}").expect("writes should not fail");
+                writeln!(self, "{v}").expect("writes should not fail");
                 Ok(())
             }
             Stmt::VarDecl(line, token, expr) => {
@@ -32,17 +26,14 @@ impl<'a> Interpreter {
                 Ok(())
             }
             Stmt::Block(stmts) => {
-                //self.environment.fork(|env| {
                 self.environment.push();
                 let mut result = Ok(());
                 for s in stmts {
                     result = result.and_then(|_| self.eval(s));
-                    //result = result.or(self.eval(s)?;
                 }
                 self.environment.pop();
                 result
             }
-            //}),
             Stmt::IfThenElse {
                 line,
                 if_expr,
@@ -52,7 +43,6 @@ impl<'a> Interpreter {
                 let cond = if_expr.eval(*line, &mut self.environment)?;
                 if bool::from(cond) {
                     // why not just keep line numbers on the statements ?
-                    //then_stmt.as_ref().eval(w, env)
                     self.eval(then_stmt)
                 } else {
                     match else_stmt {
@@ -64,7 +54,6 @@ impl<'a> Interpreter {
             }
             Stmt::While(line, expr, stmt) => {
                 while bool::from(expr.eval(*line, &mut self.environment)?) {
-                    //stmt.as_ref().eval(w, env)?;
                     self.eval(stmt)?;
                 }
                 Ok(())
@@ -90,7 +79,6 @@ mod tests {
 
         let mut interpreter = Interpreter::default();
         let result = interpreter.interpret(stmts);
-        //*buf = Rc::into_inner(interpreter.buffer).expect("can unwrap yeah");
         *buf = interpreter.buffer;
         result
     }
@@ -111,7 +99,7 @@ mod tests {
     #[case("var i = 0; while (i < 4) {i = i + 1; print i;}", "1\n2\n3\n4\n")]
     fn test_eval(#[case] input: &str, #[case] want_stdout: &'static str) -> LoxResult<()> {
         let mut buf = vec![];
-        let _ = str_eval(input, &mut buf)?;
+        str_eval(input, &mut buf)?;
 
         assert_eq!(std::str::from_utf8(&buf), Ok(want_stdout));
         Ok(())
@@ -173,7 +161,7 @@ global b
 global c
 "#;
         let mut buf = vec![];
-        let _ = str_eval(input, &mut buf)?;
+        str_eval(input, &mut buf)?;
         assert_eq!(std::str::from_utf8(&buf).unwrap(), want);
         Ok(())
     }
