@@ -1,6 +1,7 @@
-#![feature(hash_raw_entry)]
-use models::Value;
-use models::ValueError;
+//use crate::models::Value;
+//use crate::models::ValueError;
+use crate::value::Value;
+use crate::value::ValueError;
 use std::collections::hash_map::RawEntryMut;
 use std::collections::HashMap;
 
@@ -24,7 +25,6 @@ impl Default for Environment {
 
 impl Environment {
     pub fn fork<T>(&mut self, f: impl FnOnce(&mut Self) -> T) -> T {
-        //pub fn fork<T>(&mut self, f: impl Fn(&mut Self) -> T) -> T {
         self.stack.push(HashMap::new());
         let res = f(self);
         self.stack.pop();
@@ -85,7 +85,7 @@ impl Env for Environment {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use models::Value::*;
+    use crate::models::Value::*;
 
     #[test]
     fn test_basic() {

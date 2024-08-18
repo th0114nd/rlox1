@@ -7,24 +7,26 @@ use std::io::BufRead;
 use std::io::Read;
 use std::io::Write;
 
-//mod environment;
+mod callable;
+mod environment;
 mod error;
-//mod expr;
+mod expr;
 mod expr_eval;
 mod interpreter;
+mod models;
 mod parser;
 mod scanner;
-//mod stmt;
+mod stmt;
 mod stmt_eval;
-//mod token;
-//mod value;
+mod token;
+mod value;
 
 use crate::error::LoxResult;
 use crate::interpreter::Interpreter;
 use crate::parser::Parser;
 use crate::scanner::Scanner;
 
-fn run(int: &mut Interpreter<io::Stdout>, src: &str) -> LoxResult<()> {
+fn run(int: &mut Interpreter, src: &str) -> LoxResult<()> {
     let mut scanner = Scanner::new(src);
     let tokens = scanner.scan_tokens()?;
     let mut parser = Parser::new(&tokens);
@@ -33,7 +35,7 @@ fn run(int: &mut Interpreter<io::Stdout>, src: &str) -> LoxResult<()> {
     int.interpret(stmts).map(move |_| ())
 }
 
-fn run_prompt(int: &mut Interpreter<io::Stdout>) -> LoxResult<()> {
+fn run_prompt(int: &mut Interpreter) -> LoxResult<()> {
     let mut input = String::new();
     loop {
         input.clear();
@@ -50,7 +52,7 @@ fn run_prompt(int: &mut Interpreter<io::Stdout>) -> LoxResult<()> {
     }
 }
 
-fn run_file(int: &mut Interpreter<io::Stdout>, file_name: &str) -> LoxResult<()> {
+fn run_file(int: &mut Interpreter, file_name: &str) -> LoxResult<()> {
     let mut file = File::open(file_name)?;
     let mut contents = String::new();
     file.read_to_string(&mut contents)?;

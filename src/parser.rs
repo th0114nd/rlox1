@@ -1,12 +1,12 @@
 use crate::error::LoxError;
 use crate::error::LoxResult;
-use models::Expr;
-use models::Stmt;
-use models::StmtList;
-use models::Token;
-use models::TokenType;
-use models::TokenType::*;
-use models::Value;
+use crate::models::Expr;
+use crate::models::Stmt;
+use crate::models::StmtList;
+use crate::models::Token;
+use crate::models::TokenType;
+use crate::models::TokenType::*;
+use crate::models::Value;
 use std::mem;
 
 type ResultExpr<'a> = LoxResult<Expr<'a>>;
@@ -339,6 +339,15 @@ impl<'long> Parser<'long> {
             }
             self.consume(Comma, "Expected ',' between arguments")?;
         }
+        if args.len() >= 255 {
+            Err(LoxError::from((
+                self.tokens[self.current],
+                "Can't have more than 255 arguments.",
+            )))
+            //self.error("Can't have more than 255 arguments.")
+        } else {
+            Ok(args)
+        }
         //let mut args = vec![];
         //while !self.token_match(&[RightParen]) {
         //    args.push(self.expression()?);
@@ -348,7 +357,7 @@ impl<'long> Parser<'long> {
         //    // arg2
         //    // paren
         //}
-        Ok(args)
+        //Ok(args)
     }
 
     fn call(&mut self) -> ResultExpr<'long> {
@@ -479,6 +488,7 @@ expr((= v#i (+ v#i 1)))
 "#
     )]
     #[case("f(a, 2 + 3);", "expr((v#f v#a (+ 2 3)))\n")]
+    #[case("f();", "expr((v#f))\n")]
     fn test_parse(#[case] input: &str, #[case] want: &str) -> Result<(), LoxError> {
         let mut scanner = Scanner::new(input);
         let tokens = scanner.scan_tokens()?;

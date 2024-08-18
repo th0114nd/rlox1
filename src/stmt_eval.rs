@@ -1,62 +1,71 @@
+use crate::environment::Env;
+//use crate::environment::Environment;
 use crate::error::LoxError;
-use crate::expr_eval::Eval;
-use environment::Env;
-use environment::Environment;
-use models::Stmt;
-use models::Value;
+use crate::interpreter::Interpreter;
+use crate::models::Stmt;
+use crate::models::Value;
 use std::io;
+use std::io::Write;
 
-pub trait SEval {
-    fn eval(&self, w: &mut impl io::Write, env: &mut Environment) -> Result<(), LoxError>;
-}
-
-impl<'a> SEval for &Stmt<'a> {
-    fn eval(&self, w: &mut impl io::Write, env: &mut Environment) -> Result<(), LoxError> {
-        match self {
+// TODO: make thisa method on &mut Interpreter, so we don't need w/env as arguments
+//impl<'a> Stmt<'a> {
+impl<'a> Interpreter {
+    //pub fn eval(&self, w: &mut impl io::Write, env: &mut Environment) -> Result<(), LoxError> {
+    pub fn eval(&mut self, stmt: &Stmt<'a>) -> Result<(), LoxError> {
+        match stmt {
             Stmt::Expr(line, expr) => {
-                expr.eval(*line, env)?;
+                expr.eval(*line, &mut self.environment)?;
                 Ok(())
             }
             Stmt::Print(line, expr) => {
-                let v = expr.eval(*line, env)?;
-                writeln!(w, "{v}").expect("writes should not fail");
+                let v = expr.eval(*line, &mut self.environment)?;
+                // TODO: self.writer()
+                writeln!(self.buffer, "{v}").expect("writes should not fail");
                 Ok(())
             }
             Stmt::VarDecl(line, token, expr) => {
                 let value = match expr {
                     None => Value::VNil,
-                    Some(expr) => expr.eval(*line, env)?,
+                    Some(expr) => expr.eval(*line, &mut self.environment)?,
                 };
-                env.define(token.lexeme, value);
+                self.environment.define(token.lexeme, value);
                 Ok(())
             }
-            Stmt::Block(stmts) => env.fork(|env| {
+            Stmt::Block(stmts) => {
+                //self.environment.fork(|env| {
+                self.environment.push();
+                let mut result = Ok(());
                 for s in stmts {
-                    s.eval(w, env)?;
+                    result = result.and_then(|_| self.eval(s));
+                    //result = result.or(self.eval(s)?;
                 }
-                Ok(())
-            }),
+                self.environment.pop();
+                result
+            }
+            //}),
             Stmt::IfThenElse {
                 line,
                 if_expr,
                 then_stmt,
                 else_stmt,
             } => {
-                let cond = if_expr.eval(*line, env)?;
+                let cond = if_expr.eval(*line, &mut self.environment)?;
                 if bool::from(cond) {
                     // why not just keep line numbers on the statements ?
-                    then_stmt.as_ref().eval(w, env)
+                    //then_stmt.as_ref().eval(w, env)
+                    self.eval(then_stmt)
                 } else {
                     match else_stmt {
                         None => Ok(()),
                         // You're just guessing line numbers now
-                        Some(else_stmt) => else_stmt.as_ref().eval(w, env),
+                        Some(else_stmt) => self.eval(else_stmt),
                     }
                 }
             }
             Stmt::While(line, expr, stmt) => {
-                while bool::from(expr.eval(*line, env)?) {
-                    stmt.as_ref().eval(w, env)?;
+                while bool::from(expr.eval(*line, &mut self.environment)?) {
+                    //stmt.as_ref().eval(w, env)?;
+                    self.eval(stmt)?;
                 }
                 Ok(())
             }
@@ -66,11 +75,12 @@ impl<'a> SEval for &Stmt<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    //use super::*;
     use crate::error::LoxResult;
     use crate::interpreter::Interpreter;
     use crate::parser::Parser;
     use crate::scanner::Scanner;
+    //use std::rc::Rc;
 
     fn str_eval(input: &str, buf: &mut Vec<u8>) -> LoxResult<()> {
         let mut scanner = Scanner::new(input);
@@ -78,11 +88,11 @@ mod tests {
         let mut parser = Parser::new(&tokens);
         let stmts = parser.parse()?;
 
-        let mut interpreter = Interpreter {
-            environment: Environment::default(),
-            w: buf,
-        };
-        interpreter.interpret(stmts)
+        let mut interpreter = Interpreter::default();
+        let result = interpreter.interpret(stmts);
+        //*buf = Rc::into_inner(interpreter.buffer).expect("can unwrap yeah");
+        *buf = interpreter.buffer;
+        result
     }
 
     #[rstest::rstest]

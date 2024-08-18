@@ -1,3 +1,4 @@
+//use crate::callable::LoxCallable;
 use std::convert::TryFrom;
 use std::fmt;
 use std::rc::Rc;
@@ -26,7 +27,8 @@ pub enum Value {
     Bool(bool),
     VNumber(f64),
     VString(String),
-    Class(Rc<dyn AnyClass>),
+    //Callable(Rc<dyn LoxCallable>),
+    Object(Rc<dyn AnyClass>),
 }
 
 use Value::*;
@@ -38,7 +40,8 @@ impl fmt::Display for Value {
             VNumber(x) => x.fmt(f),
             Bool(b) => b.fmt(f),
             VString(s) => write!(f, "{s}"),
-            Class(x) => x.fmt(f),
+            Object(x) => x.fmt(f),
+            //Callable(_) => todo!(),
         }
     }
 }

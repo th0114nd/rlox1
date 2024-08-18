@@ -1,11 +1,8 @@
 use crate::error::LoxError;
-//use crate::token::Token;
-//use crate::token::TokenType;
-//use crate::token::TokenType::*;
+use crate::models::Token;
+use crate::models::TokenType;
+use crate::models::TokenType::*;
 use lazy_static::lazy_static;
-use models::Token;
-use models::TokenType;
-use models::TokenType::*;
 use std::collections::HashMap;
 use std::iter::Peekable;
 use std::mem;

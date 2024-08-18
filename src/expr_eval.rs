@@ -1,18 +1,13 @@
+use crate::environment::Env;
+use crate::environment::Environment;
 use crate::error::LoxError;
-use environment::Env;
-use environment::Environment;
-use models::Expr;
-use models::TokenType::*;
-use models::Value;
-use models::ValueError;
+use crate::models::Expr;
+use crate::models::TokenType::*;
+use crate::models::Value;
+use crate::models::ValueError;
 
-pub trait Eval {
-    fn eval(&self, line: usize, env: &mut Environment) -> Result<Value, LoxError>;
-    fn priv_eval(&self, env: &mut Environment) -> Result<Value, ValueError>;
-}
-
-impl<'a> Eval for Expr<'a> {
-    fn eval(&self, line: usize, env: &mut Environment) -> Result<Value, LoxError> {
+impl<'a> Expr<'a> {
+    pub fn eval(&self, line: usize, env: &mut Environment) -> Result<Value, LoxError> {
         match self.priv_eval(env) {
             Ok(v) => Ok(v),
             Err(value_error) => Err(LoxError::ValueError(line, value_error)),
@@ -80,8 +75,8 @@ impl<'a> Eval for Expr<'a> {
                 }
             }
             Expr::Call { callee, arguments } => {
-                let callee: Value = callee.priv_eval(env)?;
-                let arguments: Vec<Value> = arguments
+                let _callee: Value = callee.priv_eval(env)?;
+                let _arguments: Vec<Value> = arguments
                     .into_iter()
                     .map(|arg| arg.priv_eval(env))
                     .collect::<Result<Vec<Value>, ValueError>>()?;
