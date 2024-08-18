@@ -1,3 +1,4 @@
+use crate::callable::CallError;
 use crate::callable::LoxCallable;
 use std::convert::TryFrom;
 use std::fmt;
@@ -14,6 +15,8 @@ pub enum ValueError {
     ZeroDivError,
     #[error("undefined variable: '{0}'")]
     UndefinedVariable(String),
+    #[error("call error: '{0}'")]
+    CallError(#[from] CallError),
 }
 
 type OpOutput = Result<Value, ValueError>;
@@ -27,7 +30,7 @@ pub enum Value {
     Bool(bool),
     VNumber(f64),
     VString(String),
-    Callable(Box<dyn LoxCallable>),
+    Callable(Rc<dyn LoxCallable>),
     //Object(Rc<dyn AnyClass>),
 }
 
@@ -40,8 +43,8 @@ impl fmt::Display for Value {
             VNumber(x) => x.fmt(f),
             Bool(b) => b.fmt(f),
             VString(s) => write!(f, "{s}"),
-            Object(x) => x.fmt(f),
-            //Callable(_) => todo!(),
+            //Object(x) => x.fmt(f),
+            Callable(_) => todo!(),
         }
     }
 }

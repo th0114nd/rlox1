@@ -9,18 +9,18 @@ impl<'a> Interpreter {
     pub fn eval(&mut self, stmt: &Stmt<'a>) -> Result<(), LoxError> {
         match stmt {
             Stmt::Expr(line, expr) => {
-                expr.eval(*line, &mut self.environment)?;
+                self.eval_expr(*line, expr)?;
                 Ok(())
             }
             Stmt::Print(line, expr) => {
-                let v = expr.eval(*line, &mut self.environment)?;
+                let v = self.eval_expr(*line, expr)?;
                 writeln!(self, "{v}").expect("writes should not fail");
                 Ok(())
             }
             Stmt::VarDecl(line, token, expr) => {
                 let value = match expr {
                     None => Value::VNil,
-                    Some(expr) => expr.eval(*line, &mut self.environment)?,
+                    Some(expr) => self.eval_expr(*line, expr)?,
                 };
                 self.environment.define(token.lexeme, value);
                 Ok(())
@@ -40,7 +40,8 @@ impl<'a> Interpreter {
                 then_stmt,
                 else_stmt,
             } => {
-                let cond = if_expr.eval(*line, &mut self.environment)?;
+                //let cond = if_expr.eval(*line, &mut self.environment)?;
+                let cond = self.eval_expr(*line, if_expr)?;
                 if bool::from(cond) {
                     // why not just keep line numbers on the statements ?
                     self.eval(then_stmt)
@@ -53,7 +54,7 @@ impl<'a> Interpreter {
                 }
             }
             Stmt::While(line, expr, stmt) => {
-                while bool::from(expr.eval(*line, &mut self.environment)?) {
+                while bool::from(self.eval_expr(*line, expr)?) {
                     self.eval(stmt)?;
                 }
                 Ok(())

@@ -1,14 +1,17 @@
+use crate::callable::CallError;
 use crate::environment::Env;
-use crate::environment::Environment;
 use crate::error::LoxError;
+use crate::interpreter::Interpreter;
 use crate::models::Expr;
 use crate::models::TokenType::*;
 use crate::models::Value;
 use crate::models::ValueError;
 
-impl<'a> Expr<'a> {
-    pub fn eval(&self, line: usize, env: &mut Environment) -> Result<Value, LoxError> {
-        match self.priv_eval(env) {
+//impl<'a> Expr<'a> {
+impl Interpreter {
+    //pub fn eval(&self, line: usize, env: &mut Environment) -> Result<Value, LoxError> {
+    pub fn eval_expr(&mut self, line: usize, expr: &Expr) -> Result<Value, LoxError> {
+        match self.priv_eval(expr) {
             Ok(v) => Ok(v),
             Err(value_error) => Err(LoxError::ValueError(line, value_error)),
         }
@@ -16,21 +19,23 @@ impl<'a> Expr<'a> {
 
     //impl<'a>
 
-    fn priv_eval(&self, env: &mut Environment) -> Result<Value, ValueError> {
-        match self {
+    //fn priv_eval(&self, env: &mut Environment) -> Result<Value, ValueError> {
+    fn priv_eval(&mut self, expr: &Expr) -> Result<Value, ValueError> {
+        match expr {
             // TODO: no clone / refcount?
             Expr::Literal(value) => Ok(value.clone()),
+            //Expr::Literal(value) => Ok(value),
             // TODO: no clone / refcout?
-            Expr::Variable(token) => env.get(token.lexeme).cloned(),
+            Expr::Variable(token) => self.environment.get(token.lexeme).cloned(),
             Expr::Assign { name, value } => {
-                let right = value.priv_eval(env)?;
+                let right = self.priv_eval(value)?;
                 // TODO: No clone / refcount?
-                env.assign(name.lexeme, right.clone())?;
+                self.environment.assign(name.lexeme, right.clone())?;
                 Ok(right)
             }
-            Expr::Grouping(expr) => expr.priv_eval(env),
+            Expr::Grouping(expr) => self.priv_eval(expr),
             Expr::Unary { operator, right } => {
-                let right = right.priv_eval(env)?;
+                let right = self.priv_eval(right)?;
                 match operator.token {
                     Minus => -right,
                     Bang => Ok(Value::Bool(!bool::from(right))),
@@ -43,11 +48,11 @@ impl<'a> Expr<'a> {
                 operator,
                 right,
             } => {
-                let left = left.priv_eval(env)?;
+                let left = self.priv_eval(left)?;
                 match (bool::from(&left), operator.token) {
                     (false, And) => Ok(left),
                     (true, Or) => Ok(left),
-                    (true, And) | (false, Or) => right.priv_eval(env),
+                    (true, And) | (false, Or) => self.priv_eval(right),
                     // ok to panic -- we should never parse a different logical op
                     _ => panic!("invalid logical operator '{}'", operator.lexeme),
                 }
@@ -57,8 +62,8 @@ impl<'a> Expr<'a> {
                 operator,
                 right,
             } => {
-                let left = left.priv_eval(env)?;
-                let right = right.priv_eval(env)?;
+                let left = self.priv_eval(left)?;
+                let right = self.priv_eval(right)?;
                 match operator.token {
                     Plus => left + right,
                     Minus => left - right,
@@ -75,12 +80,23 @@ impl<'a> Expr<'a> {
                 }
             }
             Expr::Call { callee, arguments } => {
-                let _callee: Value = callee.priv_eval(env)?;
-                let _arguments: Vec<Value> = arguments
+                let callee: Value = self.priv_eval(callee)?;
+                let arguments: Vec<Value> = arguments
                     .into_iter()
-                    .map(|arg| arg.priv_eval(env))
+                    .map(|arg| self.priv_eval(arg))
                     .collect::<Result<Vec<Value>, ValueError>>()?;
-                todo!()
+                if let Value::Callable(callee) = callee {
+                    let arity = callee.arity();
+                    if arity != arguments.len() {
+                        return Err(CallError::ArityMismatch(arity, arguments.len()))?;
+                    }
+                    // why interpreter and not environment?
+                    // because it can execute arbitrary code, including printing
+                    //todo!()
+                    Ok(callee.call(self, arguments)?)
+                } else {
+                    return Err(CallError::NonCallableCalled(format!("{callee}")))?;
+                }
             }
         }
     }
@@ -89,17 +105,20 @@ impl<'a> Expr<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::environment::Env;
     use crate::error::LoxResult;
     use crate::parser::Parser;
     use crate::scanner::Scanner;
     use Value::*;
 
-    fn str_eval(input: &str, env: &mut Environment) -> LoxResult<Value> {
+    fn str_eval(input: &str, interpreter: &mut Interpreter) -> LoxResult<Value> {
         let mut scanner = Scanner::new(input);
         let tokens = scanner.scan_tokens()?;
         let mut parser = Parser::new(&tokens);
         let expr = parser.expression()?;
-        expr.eval(107, env)
+        //let mut interpreter = Interpreter::default();
+        //interpreter.environment = env.clone();
+        interpreter.eval_expr(107, &expr)
     }
 
     #[rstest::rstest]
@@ -127,8 +146,9 @@ mod tests {
     #[case("nil and hello", VNil)]
     #[case("nil or 17", VNumber(17.0))]
     fn test_eval(#[case] input: &str, #[case] want: Value) -> LoxResult<()> {
-        let mut env = Environment::default();
-        let got = str_eval(input, &mut env)?;
+        //let mut env = Environment::default();
+        let mut interpreter = Interpreter::default();
+        let got = str_eval(input, &mut interpreter)?;
         assert_eq!(got, want);
         Ok(())
     }
@@ -143,8 +163,9 @@ mod tests {
         "[line 107] Error: value error: undefined variable: 'something'"
     )]
     fn test_eval_error(#[case] input: &str, #[case] want: &str) -> LoxResult<()> {
-        let mut env = Environment::default();
-        let got = str_eval(input, &mut env).expect_err("should not evaluated");
+        //let mut env = Environment::default();
+        let mut interpreter = Interpreter::default();
+        let got = str_eval(input, &mut interpreter).expect_err("should not evaluated");
         assert_eq!(format!("{got}"), want);
         Ok(())
     }
@@ -152,9 +173,10 @@ mod tests {
     #[rstest::rstest]
     #[case("defined + 1", VNumber(82.0))]
     fn test_eval_env(#[case] input: &str, #[case] want: Value) -> LoxResult<()> {
-        let mut env = Environment::default();
-        env.define("defined", VNumber(81.0));
-        let got = str_eval(input, &mut env)?;
+        //let mut env = Environment::default();
+        let mut interpreter = Interpreter::default();
+        interpreter.environment.define("defined", VNumber(81.0));
+        let got = str_eval(input, &mut interpreter)?;
         assert_eq!(got, want);
         Ok(())
     }
