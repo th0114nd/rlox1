@@ -13,7 +13,7 @@ pub type LoxResult<T> = Result<T, LoxError>;
 
 //
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq)]
 pub enum LoxError {
     #[error("[line {0}] Error: {1}")]
     ScanError(usize, String),
@@ -22,9 +22,6 @@ pub enum LoxError {
     ParseError(String),
     #[error("[line {0}] Error: unexpected eof")]
     UnexpectedEof(usize),
-
-    #[error(transparent)]
-    IoError(#[from] io::Error),
 
     #[error("{}", join_all(.0))]
     MultiError(Vec<LoxError>),

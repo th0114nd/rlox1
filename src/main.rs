@@ -21,21 +21,34 @@ mod stmt_eval;
 mod token;
 mod value;
 
+use crate::error::LoxError;
 use crate::error::LoxResult;
 use crate::interpreter::Interpreter;
 use crate::parser::Parser;
 use crate::scanner::Scanner;
 
-fn run(int: &mut Interpreter, src: &str) -> LoxResult<()> {
+use thiserror::Error;
+
+#[derive(Debug, Error)]
+enum MainError {
+    #[error("io error: {0}")]
+    IoError(#[from] io::Error),
+    #[error("runtime error: {0}")]
+    LoxError(#[from] LoxError),
+}
+
+type MainResult = Result<(), MainError>;
+
+fn run(int: &mut Interpreter, src: &str) -> MainResult {
     let mut scanner = Scanner::new(src);
     let tokens = scanner.scan_tokens()?;
     let mut parser = Parser::new(&tokens);
     let stmts = parser.parse()?;
 
-    int.interpret(stmts).map(move |_| ())
+    Ok(int.interpret(stmts).map(move |_| ())?)
 }
 
-fn run_prompt(int: &mut Interpreter) -> LoxResult<()> {
+fn run_prompt(int: &mut Interpreter) -> MainResult {
     let mut input = String::new();
     loop {
         input.clear();
@@ -52,7 +65,7 @@ fn run_prompt(int: &mut Interpreter) -> LoxResult<()> {
     }
 }
 
-fn run_file(int: &mut Interpreter, file_name: &str) -> LoxResult<()> {
+fn run_file(int: &mut Interpreter, file_name: &str) -> MainResult {
     let mut file = File::open(file_name)?;
     let mut contents = String::new();
     file.read_to_string(&mut contents)?;
@@ -63,7 +76,7 @@ fn run_file(int: &mut Interpreter, file_name: &str) -> LoxResult<()> {
     Ok(())
 }
 
-fn main() -> LoxResult<()> {
+fn main() -> MainResult {
     let args: Vec<String> = std::env::args().collect();
     let mut interpreter = Interpreter::default();
     match args.len() {
