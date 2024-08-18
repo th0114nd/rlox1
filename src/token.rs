@@ -1,8 +1,9 @@
+use compact_str::CompactString;
 use std::fmt;
 use std::fmt::Display;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum TokenType<'a> {
+#[derive(Debug, Clone, PartialEq)]
+pub enum TokenType {
     // single character tokens
     LeftParen,
     RightParen,
@@ -28,7 +29,7 @@ pub enum TokenType<'a> {
 
     // Literals
     Identifier,
-    TString(&'a str),
+    TString(CompactString),
     TNumber(f64),
 
     // Keywords
@@ -52,15 +53,15 @@ pub enum TokenType<'a> {
     Eof,
 }
 
-#[derive(Debug, Clone, PartialEq, Copy)]
-pub struct Token<'a> {
-    pub token: TokenType<'a>,
-    pub lexeme: &'a str,
+#[derive(Debug, Clone, PartialEq)]
+pub struct Token {
+    pub token: TokenType,
+    pub lexeme: CompactString,
     pub line: usize,
 }
 
-impl<'a> Display for Token<'a> {
-    fn fmt(self: &Token<'a>, f: &mut fmt::Formatter) -> fmt::Result {
+impl Display for Token {
+    fn fmt(self: &Token, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{:?} {:?}", self.token, self.lexeme)
     }
 }

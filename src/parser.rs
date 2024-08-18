@@ -10,13 +10,13 @@ use crate::models::TokenType::*;
 use crate::models::Value;
 use std::mem;
 
-type ResultExpr<'a> = LoxResult<Expr<'a>>;
-type ResultStmt<'a> = LoxResult<Stmt<'a>>;
+type ResultExpr = LoxResult<Expr>;
+type ResultStmt = LoxResult<Stmt>;
 
 pub struct Parser<'long> {
-    tokens: &'long [Token<'long>],
+    tokens: &'long [Token],
     current: usize,
-    statements: Vec<Stmt<'long>>,
+    statements: Vec<Stmt>,
     errors: Vec<LoxError>,
 }
 
@@ -46,31 +46,35 @@ impl<'long> Parser<'long> {
     }
 
     fn is_at_end(&self) -> bool {
-        self.peek() == Eof
+        *self.peek() == Eof
     }
 
-    fn previous(&self) -> Token<'long> {
-        self.tokens[self.current - 1]
+    fn previous(&self) -> &Token {
+        &self.tokens[self.current - 1]
     }
 
-    fn peek(&self) -> TokenType {
+    fn current(&self) -> &Token {
+        &self.tokens[self.current]
+    }
+
+    fn peek(&self) -> &TokenType {
         if self.current >= self.tokens.len() {
-            Eof
+            &Eof
         } else {
-            self.tokens[self.current].token
+            &self.current().token
         }
     }
 
     fn consume(&mut self, token_type: TokenType, err_msg: &str) -> LoxResult<()> {
-        let token = self.tokens[self.current];
+        let token = self.current();
         if token.token != token_type {
-            return Err(LoxError::from((token, err_msg)));
+            return Err(LoxError::from((token.clone(), err_msg)));
         }
         self.advance();
         Ok(())
     }
 
-    fn check(&self, token_type: TokenType) -> bool {
+    fn check(&self, token_type: &TokenType) -> bool {
         if self.is_at_end() {
             false
         } else {
@@ -80,7 +84,7 @@ impl<'long> Parser<'long> {
 
     fn token_match(&mut self, types: &'static [TokenType]) -> bool {
         for token_type in types {
-            if self.check(*token_type) {
+            if self.check(token_type) {
                 self.advance();
                 return true;
             }
@@ -98,7 +102,7 @@ impl<'long> Parser<'long> {
         };
     }
 
-    fn declaration(&mut self) -> ResultStmt<'long> {
+    fn declaration(&mut self) -> ResultStmt {
         if self.token_match(&[Fun]) {
             self.fun_declaration()
         } else if self.token_match(&[Var]) {
@@ -108,9 +112,9 @@ impl<'long> Parser<'long> {
         }
     }
 
-    fn fun_declaration(&mut self) -> ResultStmt<'long> {
+    fn fun_declaration(&mut self) -> ResultStmt {
         self.consume(Identifier, "Expected identifier in declaration")?;
-        let name = self.previous();
+        let name = self.previous().clone();
         let line = name.line;
         self.consume(LeftParen, "Expected '(' to start parameter list")?;
         let parameters = self.parameters()?;
@@ -124,10 +128,10 @@ impl<'long> Parser<'long> {
         }))
     }
 
-    fn var_declaration(&mut self) -> ResultStmt<'long> {
+    fn var_declaration(&mut self) -> ResultStmt {
         self.consume(Identifier, "expected identifier in declaration")?;
-        let lhs = self.previous();
-        let rhs: Option<Expr<'long>> = if self.token_match(&[Equal]) {
+        let lhs = self.previous().clone();
+        let rhs: Option<Expr> = if self.token_match(&[Equal]) {
             Some(self.expression()?)
         } else {
             None
@@ -137,7 +141,7 @@ impl<'long> Parser<'long> {
         Ok(Stmt::VarDecl(line, lhs, rhs))
     }
 
-    fn statement(&mut self) -> ResultStmt<'long> {
+    fn statement(&mut self) -> ResultStmt {
         if self.token_match(&[For]) {
             return self.for_statement();
         }
@@ -156,7 +160,7 @@ impl<'long> Parser<'long> {
         self.expression_statement()
     }
 
-    fn for_statement(&mut self) -> ResultStmt<'long> {
+    fn for_statement(&mut self) -> ResultStmt {
         self.consume(LeftParen, "Expect '(' around condition")?;
         let line = self.previous().line;
 
@@ -198,7 +202,7 @@ impl<'long> Parser<'long> {
         })
     }
 
-    fn while_statement(&mut self) -> ResultStmt<'long> {
+    fn while_statement(&mut self) -> ResultStmt {
         self.consume(LeftParen, "Expect '(' around condition")?;
         let expr = self.expression()?;
         self.consume(RightParen, "Expect ')' around condition")?;
@@ -207,7 +211,7 @@ impl<'long> Parser<'long> {
         Ok(Stmt::While(line, expr, stmt))
     }
 
-    fn if_statement(&mut self) -> ResultStmt<'long> {
+    fn if_statement(&mut self) -> ResultStmt {
         self.consume(LeftParen, "Expect '(' around condition")?;
         let if_expr = self.expression()?;
         self.consume(RightParen, "Expect ')' around condition")?;
@@ -227,16 +231,16 @@ impl<'long> Parser<'long> {
         })
     }
 
-    fn print_statement(&mut self) -> ResultStmt<'long> {
+    fn print_statement(&mut self) -> ResultStmt {
         let expr = self.expression()?;
         self.consume(Semicolon, "Expect ';' after value.")?;
         let line = self.previous().line;
         Ok(Stmt::Print(line, expr))
     }
 
-    fn block(&mut self) -> ResultStmt<'long> {
+    fn block(&mut self) -> ResultStmt {
         let mut statements = vec![];
-        while !self.check(RightBrace) && !self.is_at_end() {
+        while !self.check(&RightBrace) && !self.is_at_end() {
             let decl = self.declaration()?;
             statements.push(decl);
         }
@@ -244,26 +248,26 @@ impl<'long> Parser<'long> {
         Ok(Stmt::Block(statements))
     }
 
-    fn expression_statement(&mut self) -> ResultStmt<'long> {
+    fn expression_statement(&mut self) -> ResultStmt {
         let expr = self.expression()?;
         self.consume(Semicolon, "Expect ';' after value.")?;
         let line = self.previous().line;
         Ok(Stmt::Expr(line, expr))
     }
 
-    pub fn expression(&mut self) -> ResultExpr<'long> {
+    pub fn expression(&mut self) -> ResultExpr {
         self.assignment()
     }
 
     fn bin_op(
         &mut self,
         token_types: &'static [TokenType],
-        mut next_op: impl FnMut(&mut Self) -> ResultExpr<'long>,
-    ) -> ResultExpr<'long> {
+        mut next_op: impl FnMut(&mut Self) -> ResultExpr,
+    ) -> ResultExpr {
         let mut expr = next_op(self)?;
 
         while self.token_match(token_types) {
-            let operator = self.previous();
+            let operator = self.previous().clone();
             let right = next_op(self)?;
             expr = Expr::Binary {
                 left: Box::new(expr),
@@ -277,12 +281,12 @@ impl<'long> Parser<'long> {
     fn bin_logic_op(
         &mut self,
         token_types: &'static [TokenType],
-        mut next_op: impl FnMut(&mut Self) -> ResultExpr<'long>,
-    ) -> ResultExpr<'long> {
+        mut next_op: impl FnMut(&mut Self) -> ResultExpr,
+    ) -> ResultExpr {
         let mut expr = next_op(self)?;
 
         while self.token_match(token_types) {
-            let operator = self.previous();
+            let operator = self.previous().clone();
             let right = next_op(self)?;
             expr = Expr::Logical {
                 left: Box::new(expr),
@@ -293,50 +297,53 @@ impl<'long> Parser<'long> {
         Ok(expr)
     }
 
-    fn assignment(&mut self) -> ResultExpr<'long> {
+    fn assignment(&mut self) -> ResultExpr {
         let expr = self.logic_or()?;
         if self.token_match(&[Equal]) {
-            let equals = self.previous();
+            let equals = self.previous().clone();
             let value = self.assignment()?;
             match expr {
                 Expr::Variable(name) => Ok(Expr::Assign {
                     name,
                     value: Box::new(value),
                 }),
-                _ => Err(LoxError::from((equals, "Invalid assignment target."))),
+                _ => Err(LoxError::from((
+                    equals.clone(),
+                    "Invalid assignment target.",
+                ))),
             }
         } else {
             Ok(expr)
         }
     }
 
-    fn logic_or(&mut self) -> ResultExpr<'long> {
+    fn logic_or(&mut self) -> ResultExpr {
         self.bin_logic_op(&[Or], |s| s.logic_and())
     }
 
-    fn logic_and(&mut self) -> ResultExpr<'long> {
+    fn logic_and(&mut self) -> ResultExpr {
         self.bin_logic_op(&[And], |s| s.equality())
     }
 
-    fn equality(&mut self) -> ResultExpr<'long> {
+    fn equality(&mut self) -> ResultExpr {
         self.bin_op(&[BangEqual, EqualEqual], |s| s.comparison())
     }
 
-    fn comparison(&mut self) -> ResultExpr<'long> {
+    fn comparison(&mut self) -> ResultExpr {
         self.bin_op(&[Greater, GreaterEqual, Less, LessEqual], |s| s.term())
     }
 
-    fn term(&mut self) -> ResultExpr<'long> {
+    fn term(&mut self) -> ResultExpr {
         self.bin_op(&[Plus, Minus], |s| s.factor())
     }
 
-    fn factor(&mut self) -> ResultExpr<'long> {
+    fn factor(&mut self) -> ResultExpr {
         self.bin_op(&[Star, Slash], |s| s.unary())
     }
 
-    fn unary(&mut self) -> ResultExpr<'long> {
+    fn unary(&mut self) -> ResultExpr {
         if self.token_match(&[Bang, Minus]) {
-            let operator = self.previous();
+            let operator = self.previous().clone();
             let right = self.unary()?;
             Ok(Expr::Unary {
                 operator,
@@ -347,14 +354,14 @@ impl<'long> Parser<'long> {
         }
     }
 
-    fn parameters(&mut self) -> Result<Vec<Token<'long>>, LoxError> {
+    fn parameters(&mut self) -> Result<Vec<Token>, LoxError> {
         if self.token_match(&[RightParen]) {
             return Ok(vec![]);
         }
         let mut params = vec![];
         loop {
             self.consume(Identifier, "Expected identifier for parameter")?;
-            params.push(self.previous());
+            params.push(self.previous().clone());
             if self.token_match(&[RightParen]) {
                 break;
             }
@@ -362,7 +369,7 @@ impl<'long> Parser<'long> {
         }
         if params.len() >= 255 {
             Err(LoxError::from((
-                self.tokens[self.current],
+                self.current().clone(),
                 "Can't have more than 255 parameters",
             )))
         } else {
@@ -370,7 +377,7 @@ impl<'long> Parser<'long> {
         }
     }
 
-    fn arguments(&mut self) -> Result<Vec<Expr<'long>>, LoxError> {
+    fn arguments(&mut self) -> Result<Vec<Expr>, LoxError> {
         if self.token_match(&[RightParen]) {
             return Ok(vec![]);
         }
@@ -384,26 +391,15 @@ impl<'long> Parser<'long> {
         }
         if args.len() >= 255 {
             Err(LoxError::from((
-                self.tokens[self.current],
+                self.current().clone(),
                 "Can't have more than 255 arguments.",
             )))
-            //self.error("Can't have more than 255 arguments.")
         } else {
             Ok(args)
         }
-        //let mut args = vec![];
-        //while !self.token_match(&[RightParen]) {
-        //    args.push(self.expression()?);
-        //    self.consume(Comma, "Expected ',' between arguments")?;
-        //    // arg1
-        //    // comma
-        //    // arg2
-        //    // paren
-        //}
-        //Ok(args)
     }
 
-    fn call(&mut self) -> ResultExpr<'long> {
+    fn call(&mut self) -> ResultExpr {
         let mut expr = self.primary()?;
         while self.token_match(&[LeftParen]) {
             let arguments = self.arguments()?;
@@ -415,7 +411,7 @@ impl<'long> Parser<'long> {
         Ok(expr)
     }
 
-    fn primary(&mut self) -> ResultExpr<'long> {
+    fn primary(&mut self) -> ResultExpr {
         let cur_token = self.peek();
         match cur_token {
             Eof => Err(LoxError::UnexpectedEof(self.current)),
@@ -432,10 +428,10 @@ impl<'long> Parser<'long> {
             }
             Identifier => {
                 self.advance();
-                Ok(Expr::Variable(self.previous()))
+                Ok(Expr::Variable(self.previous().clone()))
             }
             _ => {
-                let token = self.tokens[self.current];
+                let token = self.tokens[self.current].clone();
                 let err_msg = "unexpected token";
                 Err(LoxError::from((token, err_msg)))
             }

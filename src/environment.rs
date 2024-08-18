@@ -1,5 +1,6 @@
 use crate::models::Value;
 use crate::models::ValueError;
+use compact_str::CompactString;
 use std::collections::hash_map::RawEntryMut;
 use std::collections::HashMap;
 
@@ -10,7 +11,7 @@ pub trait Env {
 }
 
 pub struct Environment {
-    stack: Vec<HashMap<String, Value>>,
+    stack: Vec<HashMap<CompactString, Value>>,
 }
 
 impl Default for Environment {
@@ -60,7 +61,7 @@ impl Env for Environment {
                 o.insert(value);
             }
             RawEntryMut::Vacant(v) => {
-                v.insert(name.to_owned(), value);
+                v.insert(name.into(), value);
             }
         }
     }
@@ -104,8 +105,8 @@ mod tests {
         assert_eq!(env.assign("hello", Bool(true)), Ok(()));
         assert_eq!(env.get("hello"), Ok(&Bool(true)));
 
-        env.define("hello", VString("world".to_owned()));
-        assert_eq!(env.get("hello"), Ok(&VString("world".to_owned())));
+        env.define("hello", VString("world".into()));
+        assert_eq!(env.get("hello"), Ok(&VString("world".into())));
     }
 
     #[test]
@@ -127,11 +128,11 @@ mod tests {
         assert_eq!(env.assign("hello", Bool(true)), Ok(()));
         assert_eq!(env.get("hello"), Ok(&Bool(true)));
 
-        env.define("hello", VString("world".to_owned()));
-        assert_eq!(env.get("hello"), Ok(&VString("world".to_owned())));
+        env.define("hello", VString("world".into()));
+        assert_eq!(env.get("hello"), Ok(&VString("world".into())));
 
         env.fork(|env| {
-            assert_eq!(env.get("hello"), Ok(&VString("world".to_owned())));
+            assert_eq!(env.get("hello"), Ok(&VString("world".into())));
             // Overrides in parent
             env.assign("hello", Bool(false))?;
             assert_eq!(env.get("hello"), Ok(&Bool(false)));

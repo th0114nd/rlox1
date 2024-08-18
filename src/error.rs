@@ -44,8 +44,8 @@ fn join_all<T: Display>(items: &[T]) -> String {
     out
 }
 
-impl<'a, T: AsRef<str>> From<(Token<'a>, T)> for LoxError {
-    fn from((token, msg): (Token<'a>, T)) -> LoxError {
+impl<S: AsRef<str>> From<(Token, S)> for LoxError {
+    fn from((token, msg): (Token, S)) -> LoxError {
         let r#where = if token.token == TokenType::Eof {
             "end".to_owned()
         } else {

@@ -1,9 +1,6 @@
 use crate::environment::Env;
-use crate::error::LoxError;
 use crate::interpreter::Interpreter;
 use crate::value::Value;
-use std::rc::Rc;
-//use crate::value::ValueError;
 use std::fmt;
 use std::time;
 use thiserror::Error;
@@ -48,25 +45,25 @@ impl LoxCallable for Clock {
 
 use crate::models::FunDecl;
 #[derive(Debug)]
-pub struct LoxFunction<'a>(pub FunDecl<'a>);
+pub struct LoxFunction(pub FunDecl);
 
-impl<'a> fmt::Display for LoxFunction<'a> {
+impl fmt::Display for LoxFunction {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "<fn {}>", self.0.name.lexeme)
     }
 }
 
-impl<'a> LoxCallable for LoxFunction<'a> {
+impl LoxCallable for LoxFunction {
     fn arity(&self) -> usize {
         self.0.parameters.len()
     }
 
     fn call(&self, interpreter: &mut Interpreter, args: Vec<Value>) -> Result<Value, CallError> {
         interpreter.environment.push();
-        for (&param, arg) in self.0.parameters.iter().zip(args) {
-            interpreter.environment.define(param.lexeme, arg);
+        for (param, arg) in self.0.parameters.iter().zip(args) {
+            interpreter.environment.define(&param.lexeme, arg);
         }
-        let _result = interpreter
+        interpreter
             .eval(&self.0.body)
             .expect("oops! fix the error cycle");
         interpreter.environment.pop();

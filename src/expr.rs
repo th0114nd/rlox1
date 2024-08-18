@@ -4,35 +4,35 @@ use std::fmt;
 
 // What can we do with an expr?
 #[derive(Debug)]
-pub enum Expr<'a> {
+pub enum Expr {
     Literal(value::Value),
-    Variable(Token<'a>),
+    Variable(Token),
     Assign {
-        name: Token<'a>,
-        value: Box<Expr<'a>>,
+        name: Token,
+        value: Box<Expr>,
     },
-    Grouping(Box<Expr<'a>>),
+    Grouping(Box<Expr>),
     Unary {
-        operator: Token<'a>,
-        right: Box<Expr<'a>>,
+        operator: Token,
+        right: Box<Expr>,
     },
     Binary {
-        left: Box<Expr<'a>>,
-        operator: Token<'a>,
-        right: Box<Expr<'a>>,
+        left: Box<Expr>,
+        operator: Token,
+        right: Box<Expr>,
     },
     Logical {
-        left: Box<Expr<'a>>,
-        operator: Token<'a>,
-        right: Box<Expr<'a>>,
+        left: Box<Expr>,
+        operator: Token,
+        right: Box<Expr>,
     },
     Call {
-        callee: Box<Expr<'a>>,
-        arguments: Vec<Expr<'a>>,
+        callee: Box<Expr>,
+        arguments: Vec<Expr>,
     },
 }
 
-impl<'a> fmt::Display for Expr<'a> {
+impl fmt::Display for Expr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self {
             Expr::Literal(value) => write!(f, "{}", value),
@@ -73,11 +73,11 @@ mod tests {
     #[case(Binary{
         left: Box::new(
             Unary{
-                operator: Token{token: TokenType::Minus, lexeme: "-", line: 1},
+                operator: Token{token: TokenType::Minus, lexeme: "-".into(), line: 1},
                 right: Box::new(Literal(value::Value::VNumber(123.0))),
             },
         ),
-        operator: Token{token: TokenType::Star, lexeme: "*", line: 1},
+        operator: Token{token: TokenType::Star, lexeme: "*".into(), line: 1},
         right: Box::new(Grouping(Box::new(Literal(value::Value::VNumber(45.67))))),
     }, "(* (- 123) (group 45.67))")]
     fn test_display(#[case] expr: Expr, #[case] want: &str) {

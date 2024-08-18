@@ -23,10 +23,10 @@ impl Interpreter {
     fn priv_eval(&mut self, expr: &Expr) -> Result<Value, ValueError> {
         match expr {
             Expr::Literal(value) => Ok(value.clone()),
-            Expr::Variable(token) => self.environment.get(token.lexeme).cloned(),
+            Expr::Variable(token) => self.environment.get(&token.lexeme).cloned(),
             Expr::Assign { name, value } => {
                 let right = self.priv_eval(value)?;
-                self.environment.assign(name.lexeme, right.clone())?;
+                self.environment.assign(&name.lexeme, right.clone())?;
                 Ok(right)
             }
             Expr::Grouping(expr) => self.priv_eval(expr),
@@ -45,10 +45,10 @@ impl Interpreter {
                 right,
             } => {
                 let left = self.priv_eval(left)?;
-                match (bool::from(&left), operator.token) {
-                    (false, And) => Ok(left),
-                    (true, Or) => Ok(left),
-                    (true, And) | (false, Or) => self.priv_eval(right),
+                match (bool::from(&left), &operator.token) {
+                    (false, &And) => Ok(left),
+                    (true, &Or) => Ok(left),
+                    (true, &And) | (false, Or) => self.priv_eval(right),
                     // ok to panic -- we should never parse a different logical op
                     _ => panic!("invalid logical operator '{}'", operator.lexeme),
                 }
@@ -117,9 +117,9 @@ mod tests {
     #[case("true", Bool(true))]
     #[case("false", Bool(false))]
     #[case("3.14", VNumber(3.14))]
-    #[case("  \" a string \" ", VString(" a string ".to_owned()))]
+    #[case("  \" a string \" ", VString(" a string ".into()))]
     #[case("2 + 4 + 5 * 3", VNumber(21.0))]
-    #[case("\"foo\" + \"bar\"", VString("foobar".to_string()))]
+    #[case("\"foo\" + \"bar\"", VString("foobar".into()))]
     #[case("4 - 7.5", VNumber(-3.5))]
     #[case("4 == 5", Bool(false))]
     #[case("!4", Bool(false))]

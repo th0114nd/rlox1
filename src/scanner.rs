@@ -9,7 +9,7 @@ use std::mem;
 use std::str::CharIndices;
 
 lazy_static! {
-    static ref KEYWORDS: HashMap<&'static str, TokenType<'static>> = HashMap::from_iter(
+    static ref KEYWORDS: HashMap<&'static str, TokenType> = HashMap::from_iter(
         vec![
             ("and", And),
             ("class", Class),
@@ -35,7 +35,7 @@ lazy_static! {
 pub struct Scanner<'a> {
     src: &'a str,
     chars: Peekable<CharIndices<'a>>,
-    tokens: Vec<Token<'a>>,
+    tokens: Vec<Token>,
     errors: Vec<LoxError>,
 
     start: usize,
@@ -56,7 +56,7 @@ impl<'a> Scanner<'a> {
         }
     }
 
-    pub fn scan_tokens(&mut self) -> Result<Vec<Token<'a>>, LoxError> {
+    pub fn scan_tokens(&mut self) -> Result<Vec<Token>, LoxError> {
         while let Some((start, c)) = self.chars.peek() {
             self.start = *start;
             let c = *c;
@@ -65,7 +65,7 @@ impl<'a> Scanner<'a> {
         }
         self.tokens.push(Token {
             token: Eof,
-            lexeme: "",
+            lexeme: "".into(),
             line: self.line,
         });
         if self.errors.is_empty() {
@@ -153,11 +153,11 @@ impl<'a> Scanner<'a> {
         }
     }
 
-    fn add_token(&mut self, token_type: TokenType<'a>) {
+    fn add_token(&mut self, token_type: TokenType) {
         self.tokens.push(Token {
             token: token_type,
             line: self.line,
-            lexeme: &self.src[self.start..self.current + 1],
+            lexeme: (&self.src[self.start..self.current + 1]).into(),
         })
     }
 
@@ -194,7 +194,7 @@ impl<'a> Scanner<'a> {
         }
         self.advance();
         let value = self.buffered_str();
-        self.add_token(TString(&value[1..value.len() - 1]));
+        self.add_token(TString((&value[1..value.len() - 1]).into()));
     }
 
     fn number(&mut self) {
@@ -220,8 +220,8 @@ impl<'a> Scanner<'a> {
             self.advance();
         }
         let ident = self.buffered_str();
-        self.add_token(match KEYWORDS.get(ident) {
-            Some(token_type) => *token_type,
+        self.add_token(match KEYWORDS.get(&ident) {
+            Some(token_type) => token_type.clone(),
             None => Identifier,
         });
     }
@@ -234,7 +234,7 @@ mod tests {
     #[rstest::rstest]
     #[case(
         "var language = \"lox\";\nvar pi = 3.14159;",
-        vec![Var, Identifier, Equal, TString("lox"), Semicolon, Var, Identifier, Equal, TNumber(3.14159), Semicolon, Eof],
+        vec![Var, Identifier, Equal, TString("lox".into()), Semicolon, Var, Identifier, Equal, TNumber(3.14159), Semicolon, Eof],
         vec!["var", "language", "=", "\"lox\"", ";", "var", "pi", "=", "3.14159", ";", ""],
     )]
     #[case(
@@ -265,8 +265,8 @@ vec![ "(", "!=", "!", "{", "-", ")", "+", "==", "}", "=", ";", "/", ">", ">=", "
         let mut scanner = Scanner::new(input);
         let tokens = scanner.scan_tokens()?;
 
-        let got_types: Vec<_> = tokens.iter().map(|token| token.token).collect();
-        let got_lexemes: Vec<_> = tokens.iter().map(|token| token.lexeme).collect();
+        let got_types: Vec<_> = tokens.iter().map(|token| token.token.clone()).collect();
+        let got_lexemes: Vec<_> = tokens.iter().map(|token| token.lexeme.clone()).collect();
         assert_eq!(got_types, want_types);
         assert_eq!(got_lexemes, want_lexemes);
         Ok(())

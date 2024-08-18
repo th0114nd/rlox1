@@ -4,30 +4,30 @@ use std::fmt;
 use std::rc::Rc;
 
 #[derive(Debug, Clone)]
-pub struct FunDecl<'a> {
+pub struct FunDecl {
     pub line: usize,
-    pub name: Token<'a>,
-    pub parameters: Vec<Token<'a>>,
-    pub body: Rc<Stmt<'a>>,
+    pub name: Token,
+    pub parameters: Vec<Token>,
+    pub body: Rc<Stmt>,
 }
 
 #[derive(Debug)]
-pub enum Stmt<'a> {
-    Expr(usize, Expr<'a>),
-    Print(usize, Expr<'a>),
-    VarDecl(usize, Token<'a>, Option<Expr<'a>>),
-    FunDecl(FunDecl<'a>),
-    Block(Vec<Stmt<'a>>),
+pub enum Stmt {
+    Expr(usize, Expr),
+    Print(usize, Expr),
+    VarDecl(usize, Token, Option<Expr>),
+    FunDecl(FunDecl),
+    Block(Vec<Stmt>),
     IfThenElse {
         line: usize,
-        if_expr: Expr<'a>,
-        then_stmt: Box<Stmt<'a>>,
-        else_stmt: Option<Box<Stmt<'a>>>,
+        if_expr: Expr,
+        then_stmt: Box<Stmt>,
+        else_stmt: Option<Box<Stmt>>,
     },
-    While(usize, Expr<'a>, Box<Stmt<'a>>),
+    While(usize, Expr, Box<Stmt>),
 }
 
-impl<'a> fmt::Display for Stmt<'a> {
+impl fmt::Display for Stmt {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Stmt::Expr(_, expr) => write!(f, "expr({expr})"),
@@ -79,9 +79,9 @@ impl<'a> fmt::Display for Stmt<'a> {
 }
 
 #[derive(Debug)]
-pub struct StmtList<'a>(pub Vec<Stmt<'a>>);
+pub struct StmtList(pub Vec<Stmt>);
 
-impl<'a> fmt::Display for StmtList<'a> {
+impl fmt::Display for StmtList {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for stmt in self.0.iter() {
             writeln!(f, "{stmt}")?;

@@ -1,5 +1,6 @@
 use crate::callable::CallError;
 use crate::callable::LoxCallable;
+use compact_str::CompactString;
 use std::convert::TryFrom;
 use std::fmt;
 use std::rc::Rc;
@@ -32,8 +33,8 @@ pub enum Value {
     VNil,
     Bool(bool),
     VNumber(f64),
-    VString(String),
-    Callable(Box<dyn LoxCallable>),
+    VString(CompactString),
+    Callable(Rc<dyn LoxCallable>),
     //Object(Rc<dyn AnyClass>),
 }
 
@@ -64,11 +65,11 @@ impl TryFrom<Value> for f64 {
     }
 }
 
-impl<'a> From<TokenType<'a>> for Value {
-    fn from(token_type: TokenType<'a>) -> Value {
+impl From<&TokenType> for Value {
+    fn from(token_type: &TokenType) -> Value {
         match token_type {
-            TokenType::TNumber(n) => VNumber(n),
-            TokenType::TString(s) => VString(s.to_owned()),
+            TokenType::TNumber(n) => VNumber(*n),
+            TokenType::TString(s) => VString(s.clone()),
             TokenType::True => Bool(true),
             TokenType::False => Bool(false),
             TokenType::Nil => VNil,
