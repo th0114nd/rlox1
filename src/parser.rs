@@ -98,12 +98,31 @@ impl<'long> Parser<'long> {
     }
 
     fn declaration(&mut self) -> ResultStmt<'long> {
-        if self.token_match(&[Var]) {
+        if self.token_match(&[Fun]) {
+            self.fun_declaration()
+        } else if self.token_match(&[Var]) {
             self.var_declaration()
         } else {
             self.statement()
         }
     }
+
+    fn fun_declaration(&mut self) -> ResultStmt<'long> {
+        self.consume(Identifier, "Expected identifier in declaration")?;
+        let name = self.previous();
+        let line = name.line;
+        self.consume(LeftParen, "Expected '(' to start parameter list")?;
+        let parameters = self.parameters()?;
+        self.consume(LeftBrace, "Expected '{' to start function body")?;
+        let body = Box::new(self.block()?);
+        Ok(Stmt::FunDecl {
+            line,
+            name,
+            parameters,
+            body,
+        })
+    }
+
     fn var_declaration(&mut self) -> ResultStmt<'long> {
         self.consume(Identifier, "expected identifier in declaration")?;
         let lhs = self.previous();
@@ -327,6 +346,29 @@ impl<'long> Parser<'long> {
         }
     }
 
+    fn parameters(&mut self) -> Result<Vec<Token<'long>>, LoxError> {
+        if self.token_match(&[RightParen]) {
+            return Ok(vec![]);
+        }
+        let mut params = vec![];
+        loop {
+            self.consume(Identifier, "Expected identifier for parameter")?;
+            params.push(self.previous());
+            if self.token_match(&[RightParen]) {
+                break;
+            }
+            self.consume(Comma, "Expected ',' between parameters")?;
+        }
+        if params.len() >= 255 {
+            Err(LoxError::from((
+                self.tokens[self.current],
+                "Can't have more than 255 parameters",
+            )))
+        } else {
+            Ok(params)
+        }
+    }
+
     fn arguments(&mut self) -> Result<Vec<Expr<'long>>, LoxError> {
         if self.token_match(&[RightParen]) {
             return Ok(vec![]);
@@ -489,6 +531,8 @@ expr((= v#i (+ v#i 1)))
     )]
     #[case("f(a, 2 + 3);", "expr((v#f v#a (+ 2 3)))\n")]
     #[case("f();", "expr((v#f))\n")]
+    #[case("fun f() {}", "(defn f '() {\n})\n")]
+    #[case("fun f(a, b) { a + b; }", "(defn f '(a b) {\nexpr((+ v#a v#b))\n})\n")]
     fn test_parse(#[case] input: &str, #[case] want: &str) -> Result<(), LoxError> {
         let mut scanner = Scanner::new(input);
         let tokens = scanner.scan_tokens()?;

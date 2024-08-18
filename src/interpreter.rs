@@ -1,14 +1,29 @@
+use crate::environment::Env;
 use crate::environment::Environment;
 use crate::error::LoxResult;
 use crate::models::StmtList;
+use crate::models::Value;
+use std::rc::Rc;
+//use crate::callable::LoxCallable;
+use crate::callable::Clock;
 use std::io;
 
-#[derive(Default)]
 pub struct Interpreter {
     pub environment: Environment,
     pub buffer: Vec<u8>,
 }
 
+impl Default for Interpreter {
+    fn default() -> Self {
+        let clock = Rc::new(Clock);
+        let mut def = Self {
+            environment: Default::default(),
+            buffer: Default::default(),
+        };
+        def.environment.define("clock", Value::Callable(clock));
+        def
+    }
+}
 #[cfg(test)]
 impl io::Write for Interpreter {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {

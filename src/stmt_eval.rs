@@ -25,6 +25,7 @@ impl<'a> Interpreter {
                 self.environment.define(token.lexeme, value);
                 Ok(())
             }
+            Stmt::FunDecl { .. } => todo!(),
             Stmt::Block(stmts) => {
                 self.environment.push();
                 let mut result = Ok(());
@@ -164,6 +165,16 @@ global c
         let mut buf = vec![];
         str_eval(input, &mut buf)?;
         assert_eq!(std::str::from_utf8(&buf).unwrap(), want);
+        Ok(())
+    }
+
+    #[test]
+    fn test_clock() -> LoxResult<()> {
+        let input = "print clock();";
+        let mut buf = vec![];
+        str_eval(input, &mut buf)?;
+        let got_utf8 = std::str::from_utf8(&buf).unwrap();
+        assert_eq!(&got_utf8[0..4], "1723");
         Ok(())
     }
 }

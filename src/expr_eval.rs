@@ -22,14 +22,10 @@ impl Interpreter {
     //fn priv_eval(&self, env: &mut Environment) -> Result<Value, ValueError> {
     fn priv_eval(&mut self, expr: &Expr) -> Result<Value, ValueError> {
         match expr {
-            // TODO: no clone / refcount?
             Expr::Literal(value) => Ok(value.clone()),
-            //Expr::Literal(value) => Ok(value),
-            // TODO: no clone / refcout?
             Expr::Variable(token) => self.environment.get(token.lexeme).cloned(),
             Expr::Assign { name, value } => {
                 let right = self.priv_eval(value)?;
-                // TODO: No clone / refcount?
                 self.environment.assign(name.lexeme, right.clone())?;
                 Ok(right)
             }
@@ -82,7 +78,7 @@ impl Interpreter {
             Expr::Call { callee, arguments } => {
                 let callee: Value = self.priv_eval(callee)?;
                 let arguments: Vec<Value> = arguments
-                    .into_iter()
+                    .iter()
                     .map(|arg| self.priv_eval(arg))
                     .collect::<Result<Vec<Value>, ValueError>>()?;
                 if let Value::Callable(callee) = callee {
@@ -90,12 +86,9 @@ impl Interpreter {
                     if arity != arguments.len() {
                         return Err(CallError::ArityMismatch(arity, arguments.len()))?;
                     }
-                    // why interpreter and not environment?
-                    // because it can execute arbitrary code, including printing
-                    //todo!()
                     Ok(callee.call(self, arguments)?)
                 } else {
-                    return Err(CallError::NonCallableCalled(format!("{callee}")))?;
+                    Err(CallError::NonCallableCalled(format!("{callee}")))?
                 }
             }
         }
@@ -116,8 +109,6 @@ mod tests {
         let tokens = scanner.scan_tokens()?;
         let mut parser = Parser::new(&tokens);
         let expr = parser.expression()?;
-        //let mut interpreter = Interpreter::default();
-        //interpreter.environment = env.clone();
         interpreter.eval_expr(107, &expr)
     }
 
@@ -163,7 +154,6 @@ mod tests {
         "[line 107] Error: value error: undefined variable: 'something'"
     )]
     fn test_eval_error(#[case] input: &str, #[case] want: &str) -> LoxResult<()> {
-        //let mut env = Environment::default();
         let mut interpreter = Interpreter::default();
         let got = str_eval(input, &mut interpreter).expect_err("should not evaluated");
         assert_eq!(format!("{got}"), want);
@@ -173,7 +163,6 @@ mod tests {
     #[rstest::rstest]
     #[case("defined + 1", VNumber(82.0))]
     fn test_eval_env(#[case] input: &str, #[case] want: Value) -> LoxResult<()> {
-        //let mut env = Environment::default();
         let mut interpreter = Interpreter::default();
         interpreter.environment.define("defined", VNumber(81.0));
         let got = str_eval(input, &mut interpreter)?;

@@ -7,6 +7,12 @@ pub enum Stmt<'a> {
     Expr(usize, Expr<'a>),
     Print(usize, Expr<'a>),
     VarDecl(usize, Token<'a>, Option<Expr<'a>>),
+    FunDecl {
+        line: usize,
+        name: Token<'a>,
+        parameters: Vec<Token<'a>>,
+        body: Box<Stmt<'a>>,
+    },
     Block(Vec<Stmt<'a>>),
     IfThenElse {
         line: usize,
@@ -49,6 +55,21 @@ impl<'a> fmt::Display for Stmt<'a> {
                 )
             }
             Stmt::While(_, expr, stmt) => write!(f, "(while {expr} {stmt})"),
+            Stmt::FunDecl {
+                line: _,
+                name,
+                parameters,
+                body,
+            } => {
+                write!(f, "(defn {} '(", name.lexeme)?;
+                for (i, parameter) in parameters.into_iter().enumerate() {
+                    if i > 0 {
+                        write!(f, " ")?;
+                    }
+                    write!(f, "{}", parameter.lexeme)?;
+                }
+                write!(f, ") {body})")
+            }
         }
     }
 }
