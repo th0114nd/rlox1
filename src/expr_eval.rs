@@ -1,4 +1,3 @@
-//use crate::callable::CallError;
 use crate::environment::Env;
 use crate::error::RuntimeError;
 use crate::interpreter::Interpreter;
@@ -6,20 +5,11 @@ use crate::models::Expr;
 use crate::models::TokenType::*;
 use crate::models::Value;
 
-//impl<'a> Expr<'a> {
 impl Interpreter {
-    //pub fn eval(&self, line: usize, env: &mut Environment) -> Result<Value, LoxError> {
     pub fn eval_expr(&mut self, line: usize, expr: &Expr) -> Result<Value, RuntimeError> {
         self.priv_eval(line, expr)
-        //match self.priv_eval(expr) {
-        //    Ok(v) => Ok(v),
-        //    Err(value_error) => Err(LoxError::ValueError(line, value_error)),
-        //}
     }
 
-    //impl<'a>
-
-    //fn priv_eval(&self, env: &mut Environment) -> Result<Value, ValueError> {
     // PUT THE LINE NUMBER ON EXPR
     fn priv_eval(&mut self, line: usize, expr: &Expr) -> Result<Value, RuntimeError> {
         match expr {
