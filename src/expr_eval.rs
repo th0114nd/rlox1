@@ -24,7 +24,7 @@ impl Interpreter {
     fn priv_eval(&mut self, line: usize, expr: &Expr) -> Result<Value, RuntimeError> {
         match expr {
             Expr::Literal(value) => Ok(value.clone()),
-            Expr::Variable(token) => self.environment.get(&token.lexeme).cloned(),
+            Expr::Variable(token) => self.environment.get(&token.lexeme),
             Expr::Assign { name, value } => {
                 let right = self.priv_eval(line, value)?;
                 self.environment.assign(&name.lexeme, right.clone())?;

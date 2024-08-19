@@ -27,3 +27,55 @@ main error:
 
 
 # closures
+
+ideally:
+global() <- makeCounter() <- counter
+actual:
+global() <- counter
+
+add an environment to the counter definition
+how many layers should that have? should it just pop off the most recent
+frame or clone the whole chain?
+
+
+if closures maintain an environment, they must be mutable
+so Rc is not enough
+
+
+as suggested by the book:
+
+closure->global
+on function evalution,
+func frame->closure->global
+
+these are pointers like Rc<RefCell<Environment>>
+
+
+environment manipulation:
+  StmtBlock {
+      self.environment.push();
+      stmts.try_for_each()
+      self.environment.pop()
+  }
+  StmtVarDecl {
+    self.environment.define(name, value)
+  }
+  StmtFunDecl {
+    // copies a whole list, out to global
+    // we probably want global to be refcounted
+    // so that each "instance" of it is shared
+    // an likely RefCell as well
+    f = func(..., self.environment.clone())
+    self.environment.define(f.name, f)
+  }
+  ExprAssign {
+    self.environment.assign(name, value.clone())
+  }
+  ExprVariable {
+    self.environment.get(name)
+  }
+
+  LoxCallable.call
+
+
+why would it be so bad to make LaxCallable &mut?

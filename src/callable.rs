@@ -1,19 +1,10 @@
 use crate::environment::Env;
+use crate::environment::Environment;
 use crate::error::RuntimeError;
 use crate::interpreter::Interpreter;
 use crate::value::Value;
 use std::fmt;
 use std::time;
-
-//#[derive(Debug, Error, PartialEq)]
-//pub enum CallError {
-//    #[error("arity mismatch")]
-//    ArityMismatch(usize, usize),
-//    #[error("system time error")]
-//    SystemTimeError,
-//    #[error("not callable: {0}")]
-//    NonCallableCalled(String),
-//}
 
 pub trait LoxCallable: fmt::Display + fmt::Debug {
     fn arity(&self) -> usize;
@@ -51,7 +42,7 @@ impl LoxCallable for Clock {
 
 use crate::models::FunDecl;
 #[derive(Debug)]
-pub struct LoxFunction(pub FunDecl);
+pub struct LoxFunction(pub FunDecl, pub Environment);
 
 impl fmt::Display for LoxFunction {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -65,12 +56,34 @@ impl LoxCallable for LoxFunction {
     }
 
     fn call(&self, interpreter: &mut Interpreter, args: Vec<Value>) -> Result<Value, RuntimeError> {
+        // we could stack the closure environment on top of the interpreter environment
+        //use std::mem;
+        let initial_len = interpreter.environment.stack.len();
+        // & MUT IS NOT INTERIOR MUTABILITY
+        //interpreter.environment.stack.append(&mut self.1.stack);
+        for env_map in self.1.stack.iter() {
+            interpreter.environment.stack.push(env_map.clone());
+        }
+
+        //mem::(&mut interpreter.environment, &mut self.1);
+        // TODO: unclone
+        // this is broken because
+        //let initial_env = mem::replace(&mut interpreter.environment, self.1.clone());
+
+        //interpreter.environment = self.1;
         interpreter.environment.push();
         for (param, arg) in self.0.parameters.iter().zip(args) {
             interpreter.environment.define(&param.lexeme, arg);
         }
+
         let result = interpreter.eval(&self.0.body);
-        interpreter.environment.pop();
+        // pop function stack frame and closure environment
+        interpreter.environment.stack.truncate(initial_len);
+
+        //interpreter.environment.pop();
+        //interpreter.environment = initial_env;
+        // TODO: update the callable env
+        //mem::swap(&mut interpreter.environment, &mut self.1);
         match result {
             Ok(()) => Ok(Value::VNil),
             Err(RuntimeError::Return { value, .. }) => Ok(value),

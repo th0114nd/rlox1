@@ -28,7 +28,8 @@ impl Interpreter {
                 Ok(())
             }
             Stmt::FunDecl(fun_decl) => {
-                let f = LoxFunction(fun_decl.clone());
+                let f = LoxFunction(fun_decl.clone(), self.environment.clone());
+                println!("fun decl {} {:?}", fun_decl.name.lexeme, f.1);
                 use crate::callable::LoxCallable;
                 let f_rc: Rc<dyn LoxCallable> = Rc::new(f);
                 let callable = Value::Callable(f_rc);
@@ -50,15 +51,12 @@ impl Interpreter {
                 then_stmt,
                 else_stmt,
             } => {
-                //let cond = if_expr.eval(*line, &mut self.environment)?;
                 let cond = self.eval_expr(*line, if_expr)?;
                 if bool::from(cond) {
-                    // why not just keep line numbers on the statements ?
                     self.eval(then_stmt)
                 } else {
                     match else_stmt {
                         None => Ok(()),
-                        // You're just guessing line numbers now
                         Some(else_stmt) => self.eval(else_stmt),
                     }
                 }
@@ -226,6 +224,23 @@ print plus("hello", "world");
     }
 
     #[test]
+    fn test_recursive() -> LoxResult<()> {
+        let input = r#"
+fun rec(n) {
+    if (n <= 0) return;
+    print n;
+    rec(n-1);
+}
+rec(3);
+"#;
+        let mut buf = vec![];
+        str_eval(input, &mut buf)?;
+        let got_utf8 = from_utf8(&buf).unwrap();
+        assert_eq!(got_utf8, "3\n2\n1\n");
+        Ok(())
+    }
+
+    #[test]
     fn test_closure() -> LoxResult<()> {
         let input = r#"
 fun makeCounter() {
@@ -236,7 +251,7 @@ fun makeCounter() {
     }
     return counter;
 }
-var count = makeCounter()
+var count = makeCounter();
 print count();
 print count();
 "#;

@@ -17,7 +17,7 @@ pub struct Interpreter {
 impl Default for Interpreter {
     fn default() -> Self {
         let clock = Rc::new(Clock);
-        let mut def = Self {
+        let def = Self {
             environment: Default::default(),
             buffer: Default::default(),
         };
