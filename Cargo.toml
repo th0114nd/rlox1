@@ -3,8 +3,8 @@ name = "rlox1"
 version = "0.1.0"
 edition = "2021"
 
-# [workspace]
-# members = ["environment", "models"]
+[workspace]
+members = ["environment"]
 
 [dependencies]
 # environment = { path = "./environment" }

@@ -1,10 +1,10 @@
 use crate::models::Token;
 use crate::models::TokenType;
 use crate::models::Value;
-//use crate::models::ValueError;
 use compact_str::CompactString;
 use std::fmt::Display;
 use std::fmt::Write;
+use std::io;
 use thiserror::Error;
 
 pub type LoxResult<T> = Result<T, LoxError>;
@@ -67,8 +67,6 @@ pub enum RuntimeError {
     Break { line: CompactString },
 }
 
-use std::io;
-
 #[derive(Debug, Error, PartialEq)]
 pub enum LoxError {
     #[error("{}", join_all(.0))]
@@ -126,9 +124,3 @@ impl From<Vec<ScanError>> for LoxError {
         LoxError::ScanErrors(vec_errs)
     }
 }
-
-//impl From<Vec<LoxError>> for LoxError {
-//    fn from(vec: Vec<LoxError>) -> LoxError {
-//        LoxError::MultiError(vec)
-//    }
-//}

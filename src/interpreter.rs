@@ -1,13 +1,12 @@
+use crate::callable::Clock;
 use crate::environment::Env;
 use crate::environment::Environment;
 use crate::error::LoxError;
 use crate::error::LoxResult;
 use crate::models::StmtList;
 use crate::models::Value;
-use std::rc::Rc;
-//use crate::callable::LoxCallable;
-use crate::callable::Clock;
 use std::io;
+use std::rc::Rc;
 
 pub struct Interpreter {
     pub environment: Environment,

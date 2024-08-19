@@ -28,11 +28,9 @@ impl Interpreter {
                 Ok(())
             }
             Stmt::FunDecl(fun_decl) => {
+                // TODO: not clone the env (unless env is rc?)
                 let f = LoxFunction(fun_decl.clone(), self.environment.clone());
-                println!("fun decl {} {:?}", fun_decl.name.lexeme, f.1);
-                use crate::callable::LoxCallable;
-                let f_rc: Rc<dyn LoxCallable> = Rc::new(f);
-                let callable = Value::Callable(f_rc);
+                let callable = Value::Callable(Rc::new(f));
                 self.environment.define(&fun_decl.name.lexeme, callable);
                 Ok(())
             }

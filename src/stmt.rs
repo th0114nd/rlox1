@@ -67,7 +67,7 @@ impl fmt::Display for Stmt {
                 body,
             }) => {
                 write!(f, "(defn {} '(", name.lexeme)?;
-                for (i, parameter) in parameters.into_iter().enumerate() {
+                for (i, parameter) in parameters.iter().enumerate() {
                     if i > 0 {
                         write!(f, " ")?;
                     }

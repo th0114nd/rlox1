@@ -79,3 +79,60 @@ environment manipulation:
 
 
 why would it be so bad to make LaxCallable &mut?
+  because a function might call itself recursively
+  and that would mean that we are taken multiple mutable borrows out at once
+  maybe arc would help with this?
+    -- it would still need to be unlocked for the duration
+    -- it would only work to separately have an update env
+
+
+Basic:
+  env tests
+  get x error
+  assign x error
+  define x v
+  get x v
+  assign x y
+  get x y
+
+Stacked:
+  push new
+    get x y
+    assign x z
+    get x z
+    define x w
+    get x w
+    define y v
+  pop
+  get x z
+  get y err
+
+Branching:
+  define g gg
+  push new
+    define i 10
+    fork env0
+  pop
+  push env0
+    get i 10
+    get g gg
+    set i 11
+  pop
+  get i e
+  push env0
+     get i 11
+      set i 12
+  pop
+
+The "natural" way is for this to be a tree with edges reversed
+  * each node in the tree is an Rc<Refcell<HashMap<>>>
+  * the edges in the tree increment a ref cell
+  * how do we know that there won't be overlappig borrows?
+    the assign/define/get operations are all short lived
+    we may need to latch a sequence of environments, but we never
+    need to jump into another function
+
+
+Or really we need to be able to swap an environment in the interpreter:
+  if we can treat the closure environment as a persistent data structure,
+  then we shouldn't need to mutate it to push a new stack frame on
