@@ -147,7 +147,21 @@ impl<'long> Parser<'long> {
         Ok(Stmt::VarDecl(line, lhs, rhs))
     }
 
+    fn return_statement(&mut self) -> ParseStmt {
+        let line = self.current_line();
+        if self.token_match(&[Semicolon]) {
+            Ok(Stmt::Return(line, Expr::Literal(Value::VNil)))
+        } else {
+            let expr = self.expression()?;
+            self.consume(Semicolon, "Expected ';' after return statement")?;
+            Ok(Stmt::Return(line, expr))
+        }
+    }
+
     fn statement(&mut self) -> ParseStmt {
+        if self.token_match(&[Return]) {
+            return self.return_statement();
+        }
         if self.token_match(&[For]) {
             return self.for_statement();
         }

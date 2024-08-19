@@ -1,6 +1,6 @@
 use crate::callable::LoxFunction;
 use crate::environment::Env;
-use crate::error::LoxError;
+use crate::error::RuntimeError;
 use crate::interpreter::Interpreter;
 use crate::models::Stmt;
 use crate::models::Value;
@@ -8,7 +8,7 @@ use std::io::Write;
 use std::rc::Rc;
 
 impl Interpreter {
-    pub fn eval(&mut self, stmt: &Stmt) -> Result<(), LoxError> {
+    pub fn eval(&mut self, stmt: &Stmt) -> Result<(), RuntimeError> {
         match stmt {
             Stmt::Expr(line, expr) => {
                 self.eval_expr(*line, expr)?;
@@ -68,6 +68,13 @@ impl Interpreter {
                     self.eval(stmt)?;
                 }
                 Ok(())
+            }
+            Stmt::Return(line, expr) => {
+                let value = self.eval_expr(*line, expr)?;
+                Err(RuntimeError::Return {
+                    line: format!("{line}").into(),
+                    value,
+                })
             }
         }
     }

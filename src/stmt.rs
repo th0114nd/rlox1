@@ -25,6 +25,7 @@ pub enum Stmt {
         else_stmt: Option<Box<Stmt>>,
     },
     While(usize, Expr, Box<Stmt>),
+    Return(usize, Expr),
 }
 
 impl fmt::Display for Stmt {
@@ -74,6 +75,7 @@ impl fmt::Display for Stmt {
                 }
                 write!(f, ") {body})")
             }
+            Stmt::Return(_, expr) => write!(f, "(return {expr})"),
         }
     }
 }

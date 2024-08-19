@@ -69,11 +69,12 @@ impl LoxCallable for LoxFunction {
         for (param, arg) in self.0.parameters.iter().zip(args) {
             interpreter.environment.define(&param.lexeme, arg);
         }
-        interpreter
-            .eval(&self.0.body)
-            .expect("oops! fix the error cycle");
+        let result = interpreter.eval(&self.0.body);
         interpreter.environment.pop();
-        // TODO: parse return values
-        Ok(Value::VNil)
+        match result {
+            Ok(()) => Ok(Value::VNil),
+            Err(RuntimeError::Return { value, .. }) => Ok(value),
+            Err(err) => Err(err),
+        }
     }
 }

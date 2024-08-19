@@ -24,6 +24,11 @@ pub enum ParseError {
     UnexpectedEof(usize),
 }
 
+// TODO: I think its probably still correct that there should be two levels to the hierarchy:
+// ValueErrors are unlabeled and the result of a computation
+// RuntimeErrors are the result of a statement evaluation and can provide a line number
+// So we should have RuntimeError(line, ValueError)
+
 #[derive(Debug, Error, PartialEq)]
 pub enum RuntimeError {
     #[error("[line {line}] Error: arity mismatch {got} vs {want}")]
