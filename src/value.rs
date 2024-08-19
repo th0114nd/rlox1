@@ -1,4 +1,3 @@
-//use crate::callable::CallError;
 use crate::callable::LoxCallable;
 use crate::error::RuntimeError;
 use compact_str::CompactString;
