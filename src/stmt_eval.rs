@@ -5,6 +5,7 @@ use crate::interpreter::Interpreter;
 use crate::models::Stmt;
 use crate::models::Value;
 use std::io::Write;
+use std::mem;
 use std::rc::Rc;
 
 impl Interpreter {
@@ -28,19 +29,22 @@ impl Interpreter {
                 Ok(())
             }
             Stmt::FunDecl(fun_decl) => {
-                // TODO: not clone the env (unless env is rc?)
-                let f = LoxFunction(fun_decl.clone(), self.environment.clone());
+                let f = LoxFunction {
+                    definition: fun_decl.clone(),
+                    closure: self.environment.clone(),
+                };
                 let callable = Value::Callable(Rc::new(f));
                 self.environment.define(&fun_decl.name.lexeme, callable);
                 Ok(())
             }
             Stmt::Block(stmts) => {
-                self.environment.push();
+                let mut alt_env = self.environment.push();
+                mem::swap(&mut alt_env, &mut self.environment);
                 let mut result = Ok(());
                 for s in stmts {
                     result = result.and_then(|_| self.eval(s));
                 }
-                self.environment.pop();
+                mem::swap(&mut alt_env, &mut self.environment);
                 result
             }
             Stmt::IfThenElse {

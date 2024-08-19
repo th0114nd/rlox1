@@ -9,7 +9,7 @@ use std::io;
 use std::rc::Rc;
 
 pub struct Interpreter {
-    pub environment: Environment,
+    pub environment: Rc<Environment>,
     pub buffer: Vec<u8>,
 }
 
