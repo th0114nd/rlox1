@@ -1,0 +1,29 @@
+# ownership
+almost all of the strings will be short, so CompactString will be good enoug
+and avoid malloc most of the time. You don't even know how slow malloc would be.
+
+# errors
+
+the hierarchy should be:
+
+main error:
+  - io error
+  - interpreter error
+     - Vec<scan error>
+     - Vec<parse error>
+        - unexpected token
+        - unexpected eof
+     - runtime error
+        - arity mismatch
+        - value error / type error
+        - zero division
+        - undefined variable
+        - break exception
+        - return exception
+        - "system time error"
+        - non callable called
+
+
+
+
+# closures
