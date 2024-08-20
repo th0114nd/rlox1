@@ -35,15 +35,11 @@ impl Resolver {
     }
 
     fn begin_scope(&mut self) {
-        //println!("begin_scope before: {:?}", self.scopes);
         self.scopes.push(Default::default());
-        //println!("begin_scope after: {:?}", self.scopes);
     }
 
     fn end_scope(&mut self) {
-        //println!("end_scope before: {:?}", self.scopes);
         self.scopes.pop();
-        //println!("end_scope after: {:?}", self.scopes);
     }
 
     fn declare(&mut self, token: &Token) {
@@ -60,7 +56,6 @@ impl Resolver {
 
     fn resolve_local(&mut self, expr: &Expr, token: &Token) {
         for (offset, scope) in self.scopes.iter().rev().enumerate() {
-            println!("{expr:?} {token:?} {offset} {scope:?}");
             match scope.get(&token.lexeme) {
                 None => continue,
                 Some(false) => {
@@ -70,7 +65,6 @@ impl Resolver {
                 }
                 Some(true) => {
                     let expr_ptr = expr as *const Expr;
-                    println!("Resolve ptr {}: {expr_ptr:?}", token.lexeme);
                     self.resolutions.insert(expr as *const Expr, offset);
                     return;
                 }

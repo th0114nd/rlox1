@@ -102,7 +102,6 @@ mod tests {
 
         let mut interpreter = Interpreter::default();
         let resolutions = resolver.resolve(&stmts)?;
-        println!("Resolutions {resolutions:?}");
         interpreter.resolutions = resolutions;
         let result = interpreter.interpret(&stmts);
         *buf = interpreter.buffer;

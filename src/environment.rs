@@ -24,6 +24,7 @@ pub struct Environment {
 impl Environment {
     pub fn push(self: &Rc<Self>) -> Rc<Self> {
         Rc::new(Self {
+        irintln!("push");
             table: HashMap::new().into(),
             parent: Some(self.clone()),
         })
@@ -69,7 +70,6 @@ impl Env for Environment {
     }
 
     fn get_at(&self, name: &str, depth: usize) -> Result<Value, RuntimeError> {
-        println!("get at {name} {depth}");
         if depth == 0 {
             self.get(name)
         } else {
@@ -81,7 +81,6 @@ impl Env for Environment {
     }
 
     fn define(&self, name: &str, value: Value) {
-        println!("define {name} {value}");
         let mut borrow = self.table.borrow_mut();
         let raw_entry = borrow.raw_entry_mut().from_key(name);
         match raw_entry {
@@ -113,7 +112,6 @@ impl Env for Environment {
     }
 
     fn assign_at(&self, name: &str, value: Value, depth: usize) -> Result<(), RuntimeError> {
-        println!("assign at {name} {value} {depth}");
         if depth == 0 {
             self.assign(name, value)
         } else {
