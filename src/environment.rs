@@ -24,7 +24,6 @@ pub struct Environment {
 impl Environment {
     pub fn push(self: &Rc<Self>) -> Rc<Self> {
         Rc::new(Self {
-        irintln!("push");
             table: HashMap::new().into(),
             parent: Some(self.clone()),
         })
@@ -42,11 +41,11 @@ impl fmt::Display for Environment {
         let mut depth = 0;
         let mut env = self;
         loop {
-            writeln!(f, "{depth}: {:?}", env.table.borrow());
+            writeln!(f, "{depth}: {:?}", env.table.borrow())?;
             depth += 1;
             match &env.parent {
                 None => return Ok(()),
-                Some(penv) => env = &penv,
+                Some(penv) => env = penv,
             }
         }
     }

@@ -65,7 +65,7 @@ impl Resolver {
                 }
                 Some(true) => {
                     let expr_ptr = expr as *const Expr;
-                    self.resolutions.insert(expr as *const Expr, offset);
+                    self.resolutions.insert(expr_ptr, offset);
                     return;
                 }
             }
