@@ -61,14 +61,14 @@ impl LoxCallable for LoxFunction {
     }
 
     fn call(&self, interpreter: &mut Interpreter, args: Vec<Value>) -> Result<Value, RuntimeError> {
-        let alt_environment = mem::take(&mut interpreter.environment);
-        interpreter.environment = self.closure.push();
+        let mut alt_environment = self.closure.push();
+        mem::swap(&mut alt_environment, &mut interpreter.environment);
         for (param, arg) in self.definition.parameters.iter().zip(args) {
             interpreter.environment.define(&param.lexeme, arg);
         }
 
         let result = interpreter.eval(&self.definition.body);
-        interpreter.environment = alt_environment;
+        interpreter.environment = mem::take(&mut alt_environment);
         match result {
             Ok(()) => Ok(Value::VNil),
             Err(RuntimeError::Return { value, .. }) => Ok(value),

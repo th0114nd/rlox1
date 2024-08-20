@@ -1,6 +1,7 @@
 use crate::models::Token;
 use crate::models::TokenType;
 use crate::models::Value;
+use crate::resolver::ResolverError;
 use compact_str::CompactString;
 use std::fmt::Display;
 use std::fmt::Write;
@@ -75,6 +76,9 @@ pub enum LoxError {
     #[error("{}", join_all(.0))]
     ParseErrors(Vec<ParseError>),
 
+    #[error("{}", join_all(.0))]
+    ResolverErrors(Vec<ResolverError>),
+
     #[error("{0}")]
     RuntimeError(#[from] RuntimeError),
 }
@@ -113,14 +117,20 @@ impl<S: AsRef<str>> From<(Token, S)> for ParseError {
     }
 }
 
+impl From<Vec<ScanError>> for LoxError {
+    fn from(vec_errs: Vec<ScanError>) -> LoxError {
+        LoxError::ScanErrors(vec_errs)
+    }
+}
+
 impl From<Vec<ParseError>> for LoxError {
     fn from(vec_errs: Vec<ParseError>) -> LoxError {
         LoxError::ParseErrors(vec_errs)
     }
 }
 
-impl From<Vec<ScanError>> for LoxError {
-    fn from(vec_errs: Vec<ScanError>) -> LoxError {
-        LoxError::ScanErrors(vec_errs)
+impl From<Vec<ResolverError>> for LoxError {
+    fn from(vec_errs: Vec<ResolverError>) -> LoxError {
+        LoxError::ResolverErrors(vec_errs)
     }
 }

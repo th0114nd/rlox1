@@ -53,6 +53,10 @@ pub enum TokenType {
     Eof,
 }
 
+// if this doesn't include the current offset in the line, can these refer to different tokens?
+// we should be able to ignore
+// or what about &Token or *Token, what if they are copied?
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Token {
     pub token: TokenType,

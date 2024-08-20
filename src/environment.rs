@@ -27,11 +27,9 @@ impl Environment {
     }
 
     fn pop(self: Rc<Self>) -> Option<Rc<Self>> {
-        // this is a silly method -- we shouldn't need to cloen
-        // to move out
+        // this is a silly method -- we shouldn't need to clone
+        // to move out. But self is Rc and so immutable
         self.parent.clone()
-        //use std::mem;
-        //mem::replace(&mut self.parent, None)
     }
 }
 

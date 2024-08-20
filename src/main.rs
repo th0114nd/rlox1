@@ -15,6 +15,7 @@ mod expr_eval;
 mod interpreter;
 mod models;
 mod parser;
+mod resolver;
 mod scanner;
 mod stmt;
 mod stmt_eval;
