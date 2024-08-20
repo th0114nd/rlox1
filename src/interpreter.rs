@@ -1,10 +1,7 @@
 use crate::callable::Clock;
 use crate::environment::Env;
 use crate::environment::Environment;
-use crate::error::LoxError;
-use crate::error::LoxResult;
 use crate::error::RuntimeError;
-use crate::models::Stmt;
 use crate::models::StmtList;
 use crate::models::Value;
 use std::io;

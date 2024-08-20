@@ -174,7 +174,7 @@ mod tests {
     use crate::parser::Parser;
     use crate::scanner::Scanner;
 
-    const script_1: &str = r#"
+    const SCRIPT_1: &str = r#"
 var a = "global";
 {
   fun showA() {
@@ -200,8 +200,11 @@ var a = "global";
     #[case("fun f(a) { print a; }", vec![0])]
     // function parameter with global
     #[case("var a; fun f(a) { print a; }", vec![0])]
+    #[case("var a; var b; fun f(a, c) { print a; print b; print c; }", vec![0, 0])]
+    #[case("{var a; var b; fun f(a, c) { print a; print b; print c; }}", vec![0, 0, 1])]
+    #[case("{ var a; print a; { print a; var a; print a;}}", vec![0, 0, 1])]
     // two references to showA in block 2
-    #[case(script_1, vec![0, 0])]
+    #[case(SCRIPT_1, vec![0, 0])]
     fn test_resolution(
         #[case] input: &str,
         #[case] want_depths: Vec<usize>,
@@ -212,7 +215,8 @@ var a = "global";
         let stmts = parser.parse()?;
         let mut resolver = Resolver::default();
         let resolutions = resolver.resolve(&stmts)?;
-        let got_depths: Vec<_> = resolutions.values().into_iter().cloned().collect();
+        let mut got_depths: Vec<_> = resolutions.values().into_iter().cloned().collect();
+        got_depths.sort();
         assert_eq!(got_depths, want_depths);
         Ok(())
     }
