@@ -2,23 +2,30 @@ use crate::callable::Clock;
 use crate::environment::Env;
 use crate::environment::Environment;
 use crate::error::RuntimeError;
+use crate::models::Expr;
 use crate::models::StmtList;
 use crate::models::Value;
+use std::collections::HashMap;
 use std::io;
 use std::rc::Rc;
 
 pub struct Interpreter {
+    pub global: Rc<Environment>,
     pub environment: Rc<Environment>,
     pub buffer: Vec<u8>,
+    pub resolutions: HashMap<*const Expr, usize>,
 }
 
 impl Default for Interpreter {
     fn default() -> Self {
         let clock = Rc::new(Clock);
-        let def = Self {
+        let mut def = Self {
+            global: Default::default(),
             environment: Default::default(),
             buffer: Default::default(),
+            resolutions: Default::default(),
         };
+        def.environment = def.global.clone();
         def.environment.define("clock", Value::Callable(clock));
         def
     }

@@ -26,17 +26,8 @@ use crate::error::LoxError;
 use crate::error::MainError;
 use crate::interpreter::Interpreter;
 use crate::parser::Parser;
+use crate::resolver::Resolver;
 use crate::scanner::Scanner;
-
-//use thiserror::Error;
-
-//#[derive(Debug, Error)]
-//enum MainError {
-//    #[error("io error: {0}")]
-//    IoError(#[from] io::Error),
-//    #[error("runtime error: {0}")]
-//    MainError(#[from] MainError),
-//}
 
 type MainResult = Result<(), MainError>;
 
@@ -45,12 +36,12 @@ fn run(int: &mut Interpreter, src: &str) -> MainResult {
     let tokens = scanner.scan_tokens()?;
     let mut parser = Parser::new(&tokens);
     let stmts = parser.parse()?;
+    let mut resolver = Resolver::default();
+    let resolutions = resolver.resolve(&stmts).map_err(LoxError::from)?;
+    int.resolutions = resolutions;
 
-    Ok(int
-        .interpret(&stmts)
-        .map_err(LoxError::from)
-        .map_err(MainError::from)
-        .map(move |_| ())?)
+    Ok(int.interpret(&stmts).map_err(LoxError::from)?)
+    //.map(move |_| ())?)
 }
 
 fn run_prompt(int: &mut Interpreter) -> MainResult {

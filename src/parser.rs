@@ -550,8 +550,8 @@ expr((= v#i (+ v#i 1)))
     )]
     #[case("f(a, 2 + 3);", "expr((v#f v#a (+ 2 3)))\n")]
     #[case("f();", "expr((v#f))\n")]
-    #[case("fun f() {}", "(defn f '() {\n})\n")]
-    #[case("fun f(a, b) { a + b; }", "(defn f '(a b) {\nexpr((+ v#a v#b))\n})\n")]
+    #[case("fun f() {}", "(defn f '() {})\n")]
+    #[case("fun f(a, b) { a + b; }", "(defn f '(a b) {expr((+ v#a v#b)) })\n")]
     fn test_parse(#[case] input: &str, #[case] want: &str) -> Result<(), LoxError> {
         let mut scanner = Scanner::new(input);
         let tokens = scanner.scan_tokens()?;

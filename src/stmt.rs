@@ -78,7 +78,7 @@ impl fmt::Display for Stmt {
                 for stmt in body.into_iter() {
                     write!(f, "{stmt} ")?;
                 }
-                write!(f, "}}")
+                write!(f, "}})")
             }
             Stmt::Return(_, expr) => write!(f, "(return {expr})"),
         }
