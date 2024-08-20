@@ -87,6 +87,7 @@ mod tests {
     use crate::error::LoxResult;
     use crate::interpreter::Interpreter;
     use crate::parser::Parser;
+    use crate::resolver::Resolver;
     use crate::scanner::Scanner;
     use std::str::from_utf8;
     //use std::rc::Rc;
@@ -97,7 +98,12 @@ mod tests {
         let mut parser = Parser::new(&tokens);
         let stmts = parser.parse()?;
 
+        let mut resolver = Resolver::default();
+
         let mut interpreter = Interpreter::default();
+        let resolutions = resolver.resolve(&stmts)?;
+        println!("Resolutions {resolutions:?}");
+        interpreter.resolutions = resolutions;
         let result = interpreter.interpret(&stmts);
         *buf = interpreter.buffer;
         result.map_err(LoxError::from)

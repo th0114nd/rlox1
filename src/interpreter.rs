@@ -10,7 +10,7 @@ use std::io;
 use std::rc::Rc;
 
 pub struct Interpreter {
-    pub global: Rc<Environment>,
+    pub globals: Rc<Environment>,
     pub environment: Rc<Environment>,
     pub buffer: Vec<u8>,
     pub resolutions: HashMap<*const Expr, usize>,
@@ -20,12 +20,12 @@ impl Default for Interpreter {
     fn default() -> Self {
         let clock = Rc::new(Clock);
         let mut def = Self {
-            global: Default::default(),
+            globals: Default::default(),
             environment: Default::default(),
             buffer: Default::default(),
             resolutions: Default::default(),
         };
-        def.environment = def.global.clone();
+        def.environment = def.globals.clone();
         def.environment.define("clock", Value::Callable(clock));
         def
     }

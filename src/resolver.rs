@@ -69,6 +69,8 @@ impl Resolver {
                     return;
                 }
                 Some(true) => {
+                    let expr_ptr = expr as *const Expr;
+                    println!("Resolve ptr {}: {expr_ptr:?}", token.lexeme);
                     self.resolutions.insert(expr as *const Expr, offset);
                     return;
                 }

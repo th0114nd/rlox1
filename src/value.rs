@@ -32,7 +32,7 @@ impl fmt::Display for Value {
             Bool(b) => b.fmt(f),
             VString(s) => write!(f, "{s}"),
             //Object(x) => x.fmt(f),
-            Callable(_) => todo!(),
+            Callable(func) => write!(f, "{func}"),
         }
     }
 }

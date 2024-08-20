@@ -14,10 +14,27 @@ impl Interpreter {
     fn priv_eval(&mut self, line: usize, expr: &Expr) -> Result<Value, RuntimeError> {
         match expr {
             Expr::Literal(value) => Ok(value.clone()),
-            Expr::Variable(token) => self.environment.get(&token.lexeme),
+            Expr::Variable(token) => {
+                let name = &token.lexeme;
+                let expr_ptr = expr as *const Expr;
+                println!("Variable ptr {name}: {expr_ptr:?}");
+                let depth = self.resolutions.get(&expr_ptr);
+                match depth {
+                    None => self.globals.get(name),
+                    Some(depth) => self.globals.get_at(name, *depth),
+                }
+                //self.environment.get(&token.lexeme),
+            }
             Expr::Assign { name, value } => {
+                let name = &name.lexeme;
                 let right = self.priv_eval(line, value)?;
-                self.environment.assign(&name.lexeme, right.clone())?;
+                let expr_ptr = expr as *const Expr;
+                println!("Assign ptr {name}: {expr_ptr:?}");
+                let depth = self.resolutions.get(&expr_ptr);
+                match depth {
+                    None => self.globals.assign(name, right.clone())?,
+                    Some(depth) => self.environment.assign_at(name, right.clone(), *depth)?,
+                }
                 Ok(right)
             }
             Expr::Grouping(expr) => self.priv_eval(line, expr),

@@ -8,8 +8,10 @@ use std::rc::Rc;
 
 pub trait Env {
     fn get(&self, name: &str) -> Result<Value, RuntimeError>;
+    fn get_at(&self, name: &str, depth: usize) -> Result<Value, RuntimeError>;
     fn define(&self, name: &str, value: Value);
     fn assign(&self, name: &str, value: Value) -> Result<(), RuntimeError>;
+    fn assign_at(&self, name: &str, value: Value, depth: usize) -> Result<(), RuntimeError>;
 }
 
 #[derive(Default, Debug)]
@@ -20,6 +22,7 @@ pub struct Environment {
 
 impl Environment {
     pub fn push(self: &Rc<Self>) -> Rc<Self> {
+        println!("push");
         Rc::new(Self {
             table: HashMap::new().into(),
             parent: Some(self.clone()),
@@ -27,6 +30,7 @@ impl Environment {
     }
 
     fn pop(self: Rc<Self>) -> Option<Rc<Self>> {
+        println!("pop");
         // this is a silly method -- we shouldn't need to clone
         // to move out. But self is Rc and so immutable
         self.parent.clone()
@@ -50,7 +54,20 @@ impl Env for Environment {
         }
     }
 
+    fn get_at(&self, name: &str, depth: usize) -> Result<Value, RuntimeError> {
+        println!("get at {name} {depth}");
+        if depth == 0 {
+            self.get(name)
+        } else {
+            self.parent
+                .as_ref()
+                .expect("we checked parent depth earlier")
+                .get_at(name, depth - 1)
+        }
+    }
+
     fn define(&self, name: &str, value: Value) {
+        println!("define {name} {value}");
         let mut borrow = self.table.borrow_mut();
         let raw_entry = borrow.raw_entry_mut().from_key(name);
         match raw_entry {
@@ -78,6 +95,15 @@ impl Env for Environment {
                 name: name.into(),
             }),
             Some(env) => env.assign(name, value),
+        }
+    }
+
+    fn assign_at(&self, name: &str, value: Value, depth: usize) -> Result<(), RuntimeError> {
+        println!("assign at {name} {value} {depth}");
+        if depth == 0 {
+            self.assign(name, value)
+        } else {
+            self.assign_at(name, value, depth - 1)
         }
     }
 }
@@ -179,6 +205,22 @@ mod tests {
         closure2.get("i").expect_err("should have error");
         env.get("i").expect_err("should have error");
         assert_eq!(closure1.get("i"), Ok(VNumber(10.0)));
+        Ok(())
+    }
+
+    #[test]
+    fn test_addressing() -> Result<(), RuntimeError> {
+        let base = Rc::new(Environment::default());
+        base.define("name", VString("base".into()));
+        let mid = base.push();
+        mid.define("name", VString("mid".into()));
+        let top = mid.push();
+        top.define("name", VString("top".into()));
+
+        assert_eq!(top.get("name")?, VString("top".into()));
+        assert_eq!(top.get_at("name", 0)?, VString("top".into()));
+        assert_eq!(top.get_at("name", 1)?, VString("mid".into()));
+        assert_eq!(top.get_at("name", 2)?, VString("base".into()));
         Ok(())
     }
 }
