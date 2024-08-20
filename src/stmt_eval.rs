@@ -269,4 +269,25 @@ print count();
         assert_eq!(got_utf8, "1\n2\n");
         Ok(())
     }
+
+    #[test]
+    fn test_lexical_scoping() -> LoxResult<()> {
+        let input = r#"
+var a = "global";
+{
+  fun showA() {
+    print a;
+  }
+
+  showA();
+  var a = "block";
+  showA();
+}
+"#;
+        let mut buf = vec![];
+        str_eval(input, &mut buf)?;
+        let got_utf8 = from_utf8(&buf).unwrap();
+        assert_eq!(got_utf8, "global\nglobal\n");
+        Ok(())
+    }
 }
