@@ -67,7 +67,7 @@ impl LoxCallable for LoxFunction {
             interpreter.environment.define(&param.lexeme, arg);
         }
 
-        let result = interpreter.eval(&self.definition.body);
+        let result = interpreter.interpret(&*self.definition.body);
         interpreter.environment = mem::take(&mut alt_environment);
         match result {
             Ok(()) => Ok(Value::VNil),

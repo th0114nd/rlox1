@@ -83,6 +83,7 @@ impl Interpreter {
 #[cfg(test)]
 mod tests {
     //use super::*;
+    use crate::error::LoxError;
     use crate::error::LoxResult;
     use crate::interpreter::Interpreter;
     use crate::parser::Parser;
@@ -97,9 +98,9 @@ mod tests {
         let stmts = parser.parse()?;
 
         let mut interpreter = Interpreter::default();
-        let result = interpreter.interpret(stmts);
+        let result = interpreter.interpret(&stmts);
         *buf = interpreter.buffer;
-        result
+        result.map_err(LoxError::from)
     }
 
     #[rstest::rstest]

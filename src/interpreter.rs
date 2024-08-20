@@ -3,6 +3,8 @@ use crate::environment::Env;
 use crate::environment::Environment;
 use crate::error::LoxError;
 use crate::error::LoxResult;
+use crate::error::RuntimeError;
+use crate::models::Stmt;
 use crate::models::StmtList;
 use crate::models::Value;
 use std::io;
@@ -47,11 +49,7 @@ impl io::Write for Interpreter {
 }
 
 impl Interpreter {
-    pub fn interpret(&mut self, stmts: StmtList) -> LoxResult<()> {
-        stmts
-            .0
-            .into_iter()
-            .try_for_each(|ref s| self.eval(s))
-            .map_err(LoxError::from)
+    pub fn interpret(&mut self, stmts: &StmtList) -> Result<(), RuntimeError> {
+        stmts.into_iter().try_for_each(|s| self.eval(s))
     }
 }

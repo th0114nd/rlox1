@@ -26,7 +26,7 @@ impl Resolver {
         &mut self,
         stmt_list: &StmtList,
     ) -> Result<HashMap<*const Expr, usize>, Vec<ResolverError>> {
-        self.resolve_stmts(&stmt_list.0);
+        self.resolve_stmts(stmt_list);
         if self.errors.is_empty() {
             Ok(mem::take(&mut self.resolutions))
         } else {
@@ -76,8 +76,8 @@ impl Resolver {
         }
     }
 
-    fn resolve_stmts(&mut self, stmts: &Vec<Stmt>) {
-        for stmt in stmts {
+    fn resolve_stmts(&mut self, stmts: &StmtList) {
+        for stmt in stmts.0.iter() {
             self.resolve_stmt(stmt);
         }
     }
@@ -110,7 +110,7 @@ impl Resolver {
                 }
                 // TODO: if body is a block vs Vec<stmt>, will this add another layer
                 // mismatched with the intpreter?
-                self.resolve_stmt(body);
+                self.resolve_stmts(body);
                 self.end_scope();
             }
             Block(stmts) => {

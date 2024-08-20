@@ -175,7 +175,7 @@ impl<'long> Parser<'long> {
             return self.if_statement();
         }
         if self.token_match(&[LeftBrace]) {
-            return self.block();
+            return self.block().map(Stmt::Block);
         }
         self.expression_statement()
     }
@@ -211,14 +211,16 @@ impl<'long> Parser<'long> {
         let base_body = self.statement()?;
         let body = match update_expr {
             None => base_body,
-            Some(update_expr) => Stmt::Block(vec![base_body, Stmt::Expr(line, update_expr)]),
+            Some(update_expr) => {
+                Stmt::Block(StmtList(vec![base_body, Stmt::Expr(line, update_expr)]))
+            }
         };
 
         let while_stmt = Stmt::While(line, end_expr, Box::new(body));
 
         Ok(match init_stmt {
             None => while_stmt,
-            Some(init_stmt) => Stmt::Block(vec![init_stmt, while_stmt]),
+            Some(init_stmt) => Stmt::Block(StmtList(vec![init_stmt, while_stmt])),
         })
     }
 
@@ -258,14 +260,14 @@ impl<'long> Parser<'long> {
         Ok(Stmt::Print(line, expr))
     }
 
-    fn block(&mut self) -> ParseStmt {
+    fn block(&mut self) -> Result<StmtList, ParseError> {
         let mut statements = vec![];
         while !self.check(&RightBrace) && !self.is_at_end() {
             let decl = self.declaration()?;
             statements.push(decl);
         }
         self.consume(RightBrace, "Expect '}' to end block.")?;
-        Ok(Stmt::Block(statements))
+        Ok(StmtList(statements))
     }
 
     fn expression_statement(&mut self) -> ParseStmt {

@@ -22,6 +22,7 @@ mod stmt_eval;
 mod token;
 mod value;
 
+use crate::error::LoxError;
 use crate::error::MainError;
 use crate::interpreter::Interpreter;
 use crate::parser::Parser;
@@ -45,7 +46,11 @@ fn run(int: &mut Interpreter, src: &str) -> MainResult {
     let mut parser = Parser::new(&tokens);
     let stmts = parser.parse()?;
 
-    Ok(int.interpret(stmts).map(move |_| ())?)
+    Ok(int
+        .interpret(&stmts)
+        .map_err(LoxError::from)
+        .map_err(MainError::from)
+        .map(move |_| ())?)
 }
 
 fn run_prompt(int: &mut Interpreter) -> MainResult {

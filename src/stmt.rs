@@ -2,13 +2,14 @@ use crate::models::Expr;
 use crate::models::Token;
 use std::fmt;
 use std::rc::Rc;
+use std::slice;
 
 #[derive(Debug, Clone)]
 pub struct FunDecl {
     pub line: usize,
     pub name: Token,
     pub parameters: Vec<Token>,
-    pub body: Rc<Stmt>,
+    pub body: Rc<StmtList>,
 }
 
 #[derive(Debug)]
@@ -17,7 +18,7 @@ pub enum Stmt {
     Print(usize, Expr),
     VarDecl(usize, Token, Option<Expr>),
     FunDecl(FunDecl),
-    Block(Vec<Stmt>),
+    Block(StmtList),
     IfThenElse {
         line: usize,
         if_expr: Expr,
@@ -73,7 +74,11 @@ impl fmt::Display for Stmt {
                     }
                     write!(f, "{}", parameter.lexeme)?;
                 }
-                write!(f, ") {body})")
+                write!(f, ") {{")?;
+                for stmt in body.into_iter() {
+                    write!(f, "{stmt} ")?;
+                }
+                write!(f, "}}")
             }
             Stmt::Return(_, expr) => write!(f, "(return {expr})"),
         }
@@ -85,9 +90,18 @@ pub struct StmtList(pub Vec<Stmt>);
 
 impl fmt::Display for StmtList {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        for stmt in self.0.iter() {
+        for stmt in self {
             writeln!(f, "{stmt}")?;
         }
         Ok(())
+    }
+}
+
+impl<'a> IntoIterator for &'a StmtList {
+    type Item = &'a Stmt;
+    type IntoIter = slice::Iter<'a, Stmt>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.iter()
     }
 }
