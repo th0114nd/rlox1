@@ -17,19 +17,16 @@ impl Interpreter {
             Expr::Variable(token) => {
                 let name = &token.lexeme;
                 let expr_ptr = expr as *const Expr;
-                println!("Variable ptr {name}: {expr_ptr:?}");
                 let depth = self.resolutions.get(&expr_ptr);
                 match depth {
                     None => self.globals.get(name),
-                    Some(depth) => self.globals.get_at(name, *depth),
+                    Some(depth) => self.environment.get_at(name, *depth),
                 }
-                //self.environment.get(&token.lexeme),
             }
             Expr::Assign { name, value } => {
                 let name = &name.lexeme;
                 let right = self.priv_eval(line, value)?;
                 let expr_ptr = expr as *const Expr;
-                println!("Assign ptr {name}: {expr_ptr:?}");
                 let depth = self.resolutions.get(&expr_ptr);
                 match depth {
                     None => self.globals.assign(name, right.clone())?,

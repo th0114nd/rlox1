@@ -4,6 +4,7 @@ use compact_str::CompactString;
 use std::cell::RefCell;
 use std::collections::hash_map::RawEntryMut;
 use std::collections::HashMap;
+use std::fmt;
 use std::rc::Rc;
 
 pub trait Env {
@@ -22,7 +23,6 @@ pub struct Environment {
 
 impl Environment {
     pub fn push(self: &Rc<Self>) -> Rc<Self> {
-        println!("push");
         Rc::new(Self {
             table: HashMap::new().into(),
             parent: Some(self.clone()),
@@ -30,10 +30,24 @@ impl Environment {
     }
 
     fn pop(self: Rc<Self>) -> Option<Rc<Self>> {
-        println!("pop");
         // this is a silly method -- we shouldn't need to clone
         // to move out. But self is Rc and so immutable
         self.parent.clone()
+    }
+}
+
+impl fmt::Display for Environment {
+    fn fmt(self: &Environment, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut depth = 0;
+        let mut env = self;
+        loop {
+            writeln!(f, "{depth}: {:?}", env.table.borrow());
+            depth += 1;
+            match &env.parent {
+                None => return Ok(()),
+                Some(penv) => env = &penv,
+            }
+        }
     }
 }
 
