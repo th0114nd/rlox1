@@ -15,6 +15,27 @@ pub enum ResolverError {
     AccessBeforeInit(Token),
     #[error("variable redefined: {0}")]
     AlreadyDefined(Token),
+
+    #[error("return outside of function: {0}")]
+    NoFuncReturn(String),
+
+    #[error("this outside of class: {0}")]
+    NoClassThis(Token),
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+enum FuncType {
+    #[default]
+    None,
+    Function,
+    Method,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+enum ClassType {
+    #[default]
+    None,
+    Class,
 }
 
 #[derive(Debug, Default)]
@@ -22,12 +43,8 @@ pub struct Resolver {
     resolutions: HashMap<*const Expr, usize>,
     errors: Vec<ResolverError>,
     scopes: Vec<HashMap<CompactString, bool>>,
-}
-
-#[derive(Debug, Clone, Copy)]
-enum FuncType {
-    Function,
-    Method,
+    func_type: FuncType,
+    class_type: ClassType,
 }
 
 impl Resolver {
@@ -96,13 +113,15 @@ impl Resolver {
         }
     }
 
-    fn resolve_function(&mut self, _func_type: FuncType, fun_decl: &FunDecl) {
+    fn resolve_function(&mut self, func_type: FuncType, fun_decl: &FunDecl) {
         let FunDecl {
             name,
             parameters,
             body,
             ..
         } = fun_decl;
+        let enclosing_function = self.func_type;
+        self.func_type = func_type;
         self.declare(name);
         self.define(name);
         self.begin_scope();
@@ -112,6 +131,7 @@ impl Resolver {
         }
         self.resolve_stmts(body);
         self.end_scope();
+        self.func_type = enclosing_function;
     }
 
     fn resolve_stmt(&mut self, stmt: &Stmt) {
@@ -128,6 +148,8 @@ impl Resolver {
             }
             FunDecl(fun_decl) => self.resolve_function(FuncType::Function, fun_decl),
             ClassDecl { name, methods, .. } => {
+                let enclosing_class = self.class_type;
+                self.class_type = ClassType::Class;
                 self.declare(name);
                 self.define(name);
                 self.begin_scope();
@@ -137,6 +159,7 @@ impl Resolver {
                     self.resolve_function(FuncType::Method, method);
                 }
                 self.end_scope();
+                self.class_type = enclosing_class;
             }
             Block(stmts) => {
                 self.begin_scope();
@@ -159,7 +182,13 @@ impl Resolver {
                 self.resolve_expr(expr);
                 self.resolve_stmt(stmt);
             }
-            Return(_, expr) => self.resolve_expr(expr),
+            Return(_, expr) => {
+                if self.func_type == FuncType::None {
+                    self.errors
+                        .push(ResolverError::NoFuncReturn(format!("{expr}")));
+                }
+                self.resolve_expr(expr);
+            }
         }
     }
 
@@ -168,7 +197,12 @@ impl Resolver {
         match expr {
             Literal(_) => {}
             Variable(token) => self.resolve_local(expr, token),
-            This(token) => self.resolve_local(expr, token),
+            This(token) => {
+                if self.class_type == ClassType::None {
+                    self.errors.push(ResolverError::NoClassThis(token.clone()))
+                }
+                self.resolve_local(expr, token);
+            }
             Assign { name, value } => {
                 self.resolve_expr(value);
                 self.resolve_local(expr, name)

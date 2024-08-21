@@ -1,4 +1,3 @@
-use crate::class::AnyClass;
 use crate::class::LoxInstance;
 use crate::environment::Env;
 use crate::environment::Environment;
@@ -81,7 +80,7 @@ impl LoxCallable for LoxFunction {
 
 impl LoxFunction {
     pub fn bind(&self, instance: Rc<LoxInstance>) -> LoxFunction {
-        let mut closure = self.closure.push();
+        let closure = self.closure.push();
 
         closure.define("this", Value::Object(Rc::new(instance)));
         LoxFunction {

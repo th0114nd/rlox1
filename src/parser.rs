@@ -484,7 +484,7 @@ impl<'long> Parser<'long> {
             }
             This => {
                 self.advance();
-                Ok(Expr::Variable(self.previous()))
+                Ok(Expr::This(self.previous()))
             }
             LeftParen => {
                 self.advance();

@@ -392,4 +392,12 @@ method(); //
         assert_eq!(got, "Jane\nJane\n");
         Ok(())
     }
+
+    #[test]
+    fn test_invalid_this() -> LoxResult<()> {
+        let input = "print this;";
+        let got = str_eval(input).expect_err("should fail");
+        assert_eq!(format!("{got}"), "this outside of class: This \"this\"");
+        Ok(())
+    }
 }
