@@ -308,4 +308,23 @@ var a = "global";
         assert_eq!(got, "world\n");
         Ok(())
     }
+
+    #[test]
+    fn test_nested_field_access() -> LoxResult<()> {
+        let input = r#"
+class Small {}
+class Big {}
+var s = Small();
+var b = Big();
+s.field = 95;
+b.s = s;
+b.s.field = 317;
+print s.field;
+print b.s.field;
+"#;
+
+        let got = str_eval(input)?;
+        assert_eq!(got, "317\n317\n");
+        Ok(())
+    }
 }
