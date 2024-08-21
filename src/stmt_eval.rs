@@ -38,11 +38,7 @@ impl Interpreter {
                 self.environment.define(&fun_decl.name.lexeme, callable);
                 Ok(())
             }
-            Stmt::ClassDecl {
-                line,
-                name,
-                methods,
-            } => {
+            Stmt::ClassDecl { name, .. } => {
                 let class = LoxClass {
                     name: name.lexeme.clone(),
                 };
@@ -294,6 +290,14 @@ var a = "global";
         let input = " class X {} print X;";
         let got = str_eval(input)?;
         assert_eq!(got, "X\n");
+        Ok(())
+    }
+
+    #[test]
+    fn test_class_instance() -> LoxResult<()> {
+        let input = "class Bagel {} print Bagel();";
+        let got = str_eval(input)?;
+        assert_eq!(got, "Bagel instance\n");
         Ok(())
     }
 }

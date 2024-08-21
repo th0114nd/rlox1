@@ -86,21 +86,33 @@ impl Interpreter {
                     .iter()
                     .map(|arg| self.priv_eval(line, arg))
                     .collect::<Result<Vec<Value>, RuntimeError>>()?;
-                if let Value::Callable(callee) = callee {
-                    let arity = callee.arity();
-                    if arity != arguments.len() {
-                        return Err(RuntimeError::ArityMismatch {
-                            line: "TODO".into(),
-                            want: arity,
-                            got: arguments.len(),
-                        })?;
+                match callee {
+                    Value::Callable(callee) => {
+                        let arity = callee.arity();
+                        if arity != arguments.len() {
+                            return Err(RuntimeError::ArityMismatch {
+                                line: "TODO".into(),
+                                want: arity,
+                                got: arguments.len(),
+                            })?;
+                        }
+                        Ok(callee.call(self, arguments)?)
                     }
-                    Ok(callee.call(self, arguments)?)
-                } else {
-                    Err(RuntimeError::NonCallableCalled {
+                    Value::Object(object) => {
+                        let arity = object.arity();
+                        if arity != arguments.len() {
+                            return Err(RuntimeError::ArityMismatch {
+                                line: "TODO".into(),
+                                want: arity,
+                                got: arguments.len(),
+                            })?;
+                        }
+                        Ok(object.call(self, arguments)?)
+                    }
+                    _ => Err(RuntimeError::NonCallableCalled {
                         line: "TODO".into(),
                         value: callee,
-                    })?
+                    })?,
                 }
             }
         }
