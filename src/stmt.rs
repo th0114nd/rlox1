@@ -27,6 +27,28 @@ pub enum Stmt {
     },
     While(usize, Expr, Box<Stmt>),
     Return(usize, Expr),
+    ClassDecl {
+        line: usize,
+        name: Token,
+        methods: Vec<FunDecl>,
+    },
+}
+
+impl fmt::Display for FunDecl {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "(defn {} '(", self.name.lexeme)?;
+        for (i, parameter) in self.parameters.iter().enumerate() {
+            if i > 0 {
+                write!(f, " ")?;
+            }
+            write!(f, "{}", parameter.lexeme)?;
+        }
+        write!(f, ") {{")?;
+        for stmt in self.body.into_iter() {
+            write!(f, "{stmt} ")?;
+        }
+        write!(f, "}})")
+    }
 }
 
 impl fmt::Display for Stmt {
@@ -61,26 +83,19 @@ impl fmt::Display for Stmt {
                 )
             }
             Stmt::While(_, expr, stmt) => write!(f, "(while {expr} {stmt})"),
-            Stmt::FunDecl(FunDecl {
+            Stmt::FunDecl(fundecl) => write!(f, "{fundecl}"),
+            Stmt::Return(_, expr) => write!(f, "(return {expr})"),
+            Stmt::ClassDecl {
                 line: _,
                 name,
-                parameters,
-                body,
-            }) => {
-                write!(f, "(defn {} '(", name.lexeme)?;
-                for (i, parameter) in parameters.iter().enumerate() {
-                    if i > 0 {
-                        write!(f, " ")?;
-                    }
-                    write!(f, "{}", parameter.lexeme)?;
+                methods,
+            } => {
+                write!(f, "(defclass {} ", name.lexeme)?;
+                for method in methods {
+                    write!(f, "{method} ")?;
                 }
-                write!(f, ") {{")?;
-                for stmt in body.into_iter() {
-                    write!(f, "{stmt} ")?;
-                }
-                write!(f, "}})")
+                write!(f, ")")
             }
-            Stmt::Return(_, expr) => write!(f, "(return {expr})"),
         }
     }
 }

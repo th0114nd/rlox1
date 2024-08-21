@@ -37,6 +37,13 @@ impl Interpreter {
                 self.environment.define(&fun_decl.name.lexeme, callable);
                 Ok(())
             }
+            Stmt::ClassDecl {
+                line,
+                name,
+                methods,
+            } => {
+                panic!("{line} {name} {methods:?}");
+            }
             Stmt::Block(stmts) => {
                 let mut alt_env = self.environment.push();
                 mem::swap(&mut alt_env, &mut self.environment);

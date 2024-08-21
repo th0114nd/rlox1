@@ -12,6 +12,8 @@ use thiserror::Error;
 pub enum ResolverError {
     #[error("variable accessed before definition: {0}")]
     AccessBeforeInit(Token),
+    #[error("variable redefined: {0}")]
+    AlreadyDefined(Token),
 }
 
 #[derive(Debug, Default)]
@@ -44,6 +46,15 @@ impl Resolver {
 
     fn declare(&mut self, token: &Token) {
         if let Some(scope) = self.scopes.last_mut() {
+            let name = token.lexeme.clone();
+            match scope.get(&name) {
+                Some(_) => self
+                    .errors
+                    .push(ResolverError::AlreadyDefined(token.clone())),
+                None => {
+                    scope.insert(name, false);
+                }
+            }
             scope.insert(token.lexeme.clone(), false);
         }
     }
@@ -104,10 +115,13 @@ impl Resolver {
                     self.declare(parameter);
                     self.define(parameter);
                 }
-                // TODO: if body is a block vs Vec<stmt>, will this add another layer
-                // mismatched with the intpreter?
                 self.resolve_stmts(body);
                 self.end_scope();
+            }
+            ClassDecl { name, .. } => {
+                self.declare(name);
+                self.define(name);
+                // TODO: resolve methods
             }
             Block(stmts) => {
                 self.begin_scope();
@@ -211,9 +225,11 @@ var a = "global";
         let stmts = parser.parse()?;
         let mut resolver = Resolver::default();
         let resolutions = resolver.resolve(&stmts)?;
-        let mut got_depths: Vec<_> = resolutions.values().into_iter().cloned().collect();
+        let mut got_depths: Vec<_> = resolutions.values().cloned().collect();
         got_depths.sort();
         assert_eq!(got_depths, want_depths);
         Ok(())
     }
+
+    // TODO: test resolver error cases
 }

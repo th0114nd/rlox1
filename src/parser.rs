@@ -110,15 +110,34 @@ impl<'long> Parser<'long> {
 
     fn declaration(&mut self) -> ParseStmt {
         if self.token_match(&[Fun]) {
-            self.fun_declaration()
+            self.fun_declaration().map(Stmt::FunDecl)
         } else if self.token_match(&[Var]) {
             self.var_declaration()
+        } else if self.token_match(&[Class]) {
+            self.class_declaration()
         } else {
             self.statement()
         }
     }
 
-    fn fun_declaration(&mut self) -> ParseStmt {
+    fn class_declaration(&mut self) -> ParseStmt {
+        self.consume(Identifier, "Expected identifier in declaration")?;
+        let name = self.previous();
+        let line = self.current_line();
+        self.consume(LeftBrace, "Expected '{' to start class declaration")?;
+        let mut methods = vec![];
+        while !self.token_match(&[RightBrace]) {
+            let method = self.fun_declaration()?;
+            methods.push(method);
+        }
+        Ok(Stmt::ClassDecl {
+            line,
+            name,
+            methods,
+        })
+    }
+
+    fn fun_declaration(&mut self) -> Result<FunDecl, ParseError> {
         self.consume(Identifier, "Expected identifier in declaration")?;
         let name = self.previous();
         let line = self.current_line();
@@ -126,12 +145,12 @@ impl<'long> Parser<'long> {
         let parameters = self.parameters()?;
         self.consume(LeftBrace, "Expected '{' to start function body")?;
         let body = self.block()?.into();
-        Ok(Stmt::FunDecl(FunDecl {
+        Ok(FunDecl {
             line,
             name,
             parameters,
             body,
-        }))
+        })
     }
 
     fn var_declaration(&mut self) -> ParseStmt {
@@ -552,6 +571,10 @@ expr((= v#i (+ v#i 1)))
     #[case("f();", "expr((v#f))\n")]
     #[case("fun f() {}", "(defn f '() {})\n")]
     #[case("fun f(a, b) { a + b; }", "(defn f '(a b) {expr((+ v#a v#b)) })\n")]
+    #[case(
+        "class X { f() {} g(a, b) { print a + b; } }",
+        "(defclass X (defn f '() {}) (defn g '(a b) {print((+ v#a v#b)) }) )\n"
+    )]
     fn test_parse(#[case] input: &str, #[case] want: &str) -> Result<(), LoxError> {
         let mut scanner = Scanner::new(input);
         let tokens = scanner.scan_tokens()?;
