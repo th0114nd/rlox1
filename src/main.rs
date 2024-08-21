@@ -8,6 +8,7 @@ use std::io::Read;
 use std::io::Write;
 
 mod callable;
+mod class;
 mod environment;
 mod error;
 mod expr;

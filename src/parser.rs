@@ -126,10 +126,12 @@ impl<'long> Parser<'long> {
         let line = self.current_line();
         self.consume(LeftBrace, "Expected '{' to start class declaration")?;
         let mut methods = vec![];
-        while !self.token_match(&[RightBrace]) {
+        //while !self.token_match(&[RightBrace]) && !self.is_at_end() {
+        while !self.check(&RightBrace) && !self.is_at_end() {
             let method = self.fun_declaration()?;
             methods.push(method);
         }
+        self.consume(RightBrace, "Expected '}' to end class declaration")?;
         Ok(Stmt::ClassDecl {
             line,
             name,

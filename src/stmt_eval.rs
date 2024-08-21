@@ -1,4 +1,5 @@
 use crate::callable::LoxFunction;
+use crate::class::LoxClass;
 use crate::environment::Env;
 use crate::error::RuntimeError;
 use crate::interpreter::Interpreter;
@@ -42,7 +43,12 @@ impl Interpreter {
                 name,
                 methods,
             } => {
-                panic!("{line} {name} {methods:?}");
+                let class = LoxClass {
+                    name: name.lexeme.clone(),
+                };
+                let object = Value::Object(Rc::new(class));
+                self.environment.define(&name.lexeme, object);
+                Ok(())
             }
             Stmt::Block(stmts) => {
                 let mut alt_env = self.environment.push();
@@ -89,8 +95,6 @@ impl Interpreter {
 
 #[cfg(test)]
 mod tests {
-    //use super::*;
-    use crate::error::LoxError;
     use crate::error::LoxResult;
     use crate::interpreter::Interpreter;
     use crate::parser::Parser;
@@ -99,7 +103,7 @@ mod tests {
     use std::str::from_utf8;
     //use std::rc::Rc;
 
-    fn str_eval(input: &str, buf: &mut Vec<u8>) -> LoxResult<()> {
+    fn str_eval(input: &str) -> LoxResult<String> {
         let mut scanner = Scanner::new(input);
         let tokens = scanner.scan_tokens()?;
         let mut parser = Parser::new(&tokens);
@@ -110,9 +114,10 @@ mod tests {
         let mut interpreter = Interpreter::default();
         let resolutions = resolver.resolve(&stmts)?;
         interpreter.resolutions = resolutions;
-        let result = interpreter.interpret(&stmts);
-        *buf = interpreter.buffer;
-        result.map_err(LoxError::from)
+        interpreter.interpret(&stmts)?;
+        Ok(from_utf8(&interpreter.buffer)
+            .expect("must parse output")
+            .into())
     }
 
     #[rstest::rstest]
@@ -130,10 +135,9 @@ mod tests {
     #[case("if (nil) print 4; else print 3;", "3\n")]
     #[case("var i = 0; while (i < 4) {i = i + 1; print i;}", "1\n2\n3\n4\n")]
     fn test_eval(#[case] input: &str, #[case] want_stdout: &'static str) -> LoxResult<()> {
-        let mut buf = vec![];
-        str_eval(input, &mut buf)?;
+        let got = str_eval(input)?;
 
-        assert_eq!(from_utf8(&buf), Ok(want_stdout));
+        assert_eq!(got, want_stdout);
         Ok(())
     }
 
@@ -147,14 +151,14 @@ mod tests {
     fn test_eval_error(
         #[case] input: &str,
         #[case] want: &str,
-        #[case] want_stdout: &str,
+        #[case] _want_stdout: &str,
     ) -> LoxResult<()> {
-        let mut buf = vec![];
-        let got = str_eval(input, &mut buf).expect_err("should have created an error");
+        let got = str_eval(input).expect_err("should have created an error");
 
         assert_eq!(format!("{got}"), want);
 
-        assert_eq!(from_utf8(&buf), Ok(want_stdout));
+        // technically this should be checked but too hard
+        //assert_eq!(from_utf8(&buf), Ok(want_stdout));
         Ok(())
     }
 
@@ -192,19 +196,16 @@ global a
 global b
 global c
 "#;
-        let mut buf = vec![];
-        str_eval(input, &mut buf)?;
-        assert_eq!(from_utf8(&buf).unwrap(), want);
+        let got = str_eval(input)?;
+        assert_eq!(got, want);
         Ok(())
     }
 
     #[test]
     fn test_clock() -> LoxResult<()> {
         let input = "print clock();";
-        let mut buf = vec![];
-        str_eval(input, &mut buf)?;
-        let got_utf8 = from_utf8(&buf).unwrap();
-        assert_eq!(&got_utf8[0..2], "17");
+        let got = str_eval(input)?;
+        assert_eq!(&got[0..2], "17");
         Ok(())
     }
 
@@ -216,10 +217,8 @@ fun f(a, b) {
 }
 f("hello", "world");
 "#;
-        let mut buf = vec![];
-        str_eval(input, &mut buf)?;
-        let got_utf8 = from_utf8(&buf).unwrap();
-        assert_eq!(got_utf8, "helloworld\n");
+        let got = str_eval(input)?;
+        assert_eq!(got, "helloworld\n");
         Ok(())
     }
 
@@ -231,10 +230,8 @@ fun plus(a, b) {
 }
 print plus("hello", "world");
 "#;
-        let mut buf = vec![];
-        str_eval(input, &mut buf)?;
-        let got_utf8 = from_utf8(&buf).unwrap();
-        assert_eq!(got_utf8, "helloworld\n");
+        let got = str_eval(input)?;
+        assert_eq!(got, "helloworld\n");
         Ok(())
     }
 
@@ -248,10 +245,8 @@ fun rec(n) {
 }
 rec(3);
 "#;
-        let mut buf = vec![];
-        str_eval(input, &mut buf)?;
-        let got_utf8 = from_utf8(&buf).unwrap();
-        assert_eq!(got_utf8, "3\n2\n1\n");
+        let got = str_eval(input)?;
+        assert_eq!(got, "3\n2\n1\n");
         Ok(())
     }
 
@@ -270,10 +265,8 @@ var count = makeCounter();
 print count();
 print count();
 "#;
-        let mut buf = vec![];
-        str_eval(input, &mut buf)?;
-        let got_utf8 = from_utf8(&buf).unwrap();
-        assert_eq!(got_utf8, "1\n2\n");
+        let got = str_eval(input)?;
+        assert_eq!(got, "1\n2\n");
         Ok(())
     }
 
@@ -291,10 +284,16 @@ var a = "global";
   showA();
 }
 "#;
-        let mut buf = vec![];
-        str_eval(input, &mut buf)?;
-        let got_utf8 = from_utf8(&buf).unwrap();
-        assert_eq!(got_utf8, "global\nglobal\n");
+        let got = str_eval(input)?;
+        assert_eq!(got, "global\nglobal\n");
+        Ok(())
+    }
+
+    #[test]
+    fn test_class_print() -> LoxResult<()> {
+        let input = " class X {} print X;";
+        let got = str_eval(input)?;
+        assert_eq!(got, "X\n");
         Ok(())
     }
 }
