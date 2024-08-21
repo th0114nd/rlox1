@@ -115,6 +115,30 @@ impl Interpreter {
                     })?,
                 }
             }
+            Expr::Get { object, name } => {
+                let lhs = self.priv_eval(line, object)?;
+                match lhs {
+                    Value::Object(obj) => obj.get(name),
+                    _ => panic!("invalid property access"),
+                }
+                //let value = lhs.get(name);
+                //panic!("expr_eval: {expr}");
+            }
+            Expr::Set {
+                object,
+                name,
+                value,
+            } => {
+                let rhs = self.priv_eval(line, value)?;
+                let lhs = self.priv_eval(line, object)?;
+                match lhs {
+                    Value::Object(obj) => {
+                        obj.set(name, rhs.clone());
+                        Ok(rhs)
+                    }
+                    _ => panic!("invalid property access"),
+                }
+            }
         }
     }
 }

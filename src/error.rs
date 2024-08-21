@@ -58,6 +58,12 @@ pub enum RuntimeError {
         name: CompactString,
     },
 
+    #[error("[line {line}]: Error: undefined property: '{name}'")]
+    UndefinedProperty {
+        line: CompactString,
+        name: CompactString,
+    },
+
     #[error("[line {line} Error: non callable called {value}")]
     NonCallableCalled { line: CompactString, value: Value },
 

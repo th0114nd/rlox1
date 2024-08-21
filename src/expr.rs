@@ -30,6 +30,15 @@ pub enum Expr {
         callee: Box<Expr>,
         arguments: Vec<Expr>,
     },
+    Get {
+        object: Box<Expr>,
+        name: Token,
+    },
+    Set {
+        object: Box<Expr>,
+        name: Token,
+        value: Box<Expr>,
+    },
 }
 
 impl fmt::Display for Expr {
@@ -56,6 +65,16 @@ impl fmt::Display for Expr {
                     write!(f, " {arg}")?;
                 }
                 write!(f, ")")
+            }
+            Expr::Get { object, name } => {
+                write!(f, "(get {object} {})", name.lexeme)
+            }
+            Expr::Set {
+                object,
+                name,
+                value,
+            } => {
+                write!(f, "(set {object} {} {value})", name.lexeme)
             }
         }
     }

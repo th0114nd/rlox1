@@ -300,4 +300,12 @@ var a = "global";
         assert_eq!(got, "Bagel instance\n");
         Ok(())
     }
+
+    #[test]
+    fn test_field_access() -> LoxResult<()> {
+        let input = "class Bagel {}\n var b = Bagel(); b.greeting = \"world\"; print b.greeting;";
+        let got = str_eval(input)?;
+        assert_eq!(got, "world\n");
+        Ok(())
+    }
 }

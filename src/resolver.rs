@@ -173,6 +173,15 @@ impl Resolver {
                     self.resolve_expr(argument);
                 }
             }
+            Get { object, .. } => {
+                self.resolve_expr(object);
+                // we can't statically resolve fields because the language is dynamic
+            }
+            Set { object, value, .. } => {
+                self.resolve_expr(object);
+                self.resolve_expr(value);
+                // we can't statically resolve fields because the language is dynamic
+            }
         }
     }
 }

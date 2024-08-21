@@ -350,6 +350,11 @@ impl<'long> Parser<'long> {
                     name,
                     value: Box::new(value),
                 }),
+                Expr::Get { object, name } => Ok(Expr::Set {
+                    object,
+                    name,
+                    value: Box::new(value),
+                }),
                 _ => Err(ParseError::from((
                     equals.clone(),
                     "Invalid assignment target.",
@@ -444,12 +449,26 @@ impl<'long> Parser<'long> {
 
     fn call(&mut self) -> ParseExpr {
         let mut expr = self.primary()?;
-        while self.token_match(&[LeftParen]) {
-            let arguments = self.arguments()?;
-            expr = Expr::Call {
-                callee: Box::new(expr),
-                arguments,
+        //while self.token_match(&[LeftParen]) {
+        loop {
+            if self.token_match(&[LeftParen]) {
+                let arguments = self.arguments()?;
+                expr = Expr::Call {
+                    callee: Box::new(expr),
+                    arguments,
+                };
+                continue;
             }
+            if self.token_match(&[Dot]) {
+                self.consume(Identifier, "Expected identifier in property access")?;
+                let name = self.previous();
+                expr = Expr::Get {
+                    object: Box::new(expr),
+                    name,
+                };
+                continue;
+            }
+            break;
         }
         Ok(expr)
     }
