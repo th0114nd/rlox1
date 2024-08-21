@@ -1,3 +1,5 @@
+use crate::class::AnyClass;
+use crate::class::LoxInstance;
 use crate::environment::Env;
 use crate::environment::Environment;
 use crate::error::RuntimeError;
@@ -43,9 +45,9 @@ impl LoxCallable for Clock {
 }
 
 use crate::models::FunDecl;
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct LoxFunction {
-    pub definition: FunDecl,
+    pub definition: Rc<FunDecl>,
     pub closure: Rc<Environment>,
 }
 
@@ -73,6 +75,18 @@ impl LoxCallable for LoxFunction {
             Ok(()) => Ok(Value::VNil),
             Err(RuntimeError::Return { value, .. }) => Ok(value),
             Err(err) => Err(err),
+        }
+    }
+}
+
+impl LoxFunction {
+    pub fn bind(&self, instance: Rc<LoxInstance>) -> LoxFunction {
+        let mut closure = self.closure.push();
+
+        closure.define("this", Value::Object(Rc::new(instance)));
+        LoxFunction {
+            definition: self.definition.clone(),
+            closure,
         }
     }
 }

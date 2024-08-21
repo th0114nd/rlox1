@@ -1,4 +1,5 @@
 use crate::callable::LoxCallable;
+use crate::callable::LoxFunction;
 use crate::error::RuntimeError;
 use crate::interpreter::Interpreter;
 use crate::models::Token;
@@ -8,7 +9,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt;
 use std::rc::Rc;
-//pub trait AnyClass: fmt::Display + fmt::Debug {}
+
 // Is every object callable? or just classes?
 // I guess we could always panic?
 pub trait AnyClass: fmt::Display + fmt::Debug + LoxCallable {
@@ -19,6 +20,7 @@ pub trait AnyClass: fmt::Display + fmt::Debug + LoxCallable {
 #[derive(Debug, Clone)]
 pub struct LoxClass {
     pub name: CompactString,
+    pub methods: HashMap<CompactString, LoxFunction>,
 }
 
 impl fmt::Display for LoxClass {
@@ -42,7 +44,8 @@ impl LoxCallable for LoxClass {
             class: self.clone(),
             fields: Default::default(),
         };
-        Ok(Value::Object(Rc::new(value)))
+        // I know I know
+        Ok(Value::Object(Rc::new(Rc::new(value))))
     }
 }
 
@@ -52,6 +55,12 @@ impl AnyClass for LoxClass {
     }
     fn set(&self, name: &Token, value: Value) {
         panic!("No set on class {self}.{} = {value}", name.lexeme);
+    }
+}
+
+impl LoxClass {
+    fn find_method(&self, name: &str) -> Option<LoxFunction> {
+        self.methods.get(name).cloned()
     }
 }
 
@@ -69,7 +78,7 @@ impl fmt::Display for LoxInstance {
     }
 }
 
-impl LoxCallable for LoxInstance {
+impl LoxCallable for Rc<LoxInstance> {
     fn arity(&self) -> usize {
         0
     }
@@ -83,16 +92,20 @@ impl LoxCallable for LoxInstance {
     }
 }
 
-impl AnyClass for LoxInstance {
+impl AnyClass for Rc<LoxInstance> {
     fn get(&self, name: &Token) -> Result<Value, RuntimeError> {
         let borrow = self.fields.borrow();
-        borrow
-            .get(&name.lexeme)
-            .ok_or(RuntimeError::UndefinedProperty {
-                line: "TODO".into(),
-                name: name.lexeme.to_owned(),
-            })
-            .cloned()
+        if let Some(value) = borrow.get(&name.lexeme) {
+            return Ok(value.clone());
+        }
+        if let Some(method) = self.class.find_method(&name.lexeme) {
+            let x: Rc<LoxInstance> = self.clone();
+            return Ok(Value::Callable(Rc::new(method.bind(x))));
+        }
+        Err(RuntimeError::UndefinedProperty {
+            line: "TODO".into(),
+            name: name.lexeme.to_owned(),
+        })
     }
 
     fn set(&self, name: &Token, value: Value) {

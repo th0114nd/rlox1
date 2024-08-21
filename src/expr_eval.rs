@@ -23,6 +23,15 @@ impl Interpreter {
                     Some(depth) => self.environment.get_at(name, *depth),
                 }
             }
+            Expr::This(token) => {
+                let name = &token.lexeme;
+                let expr_ptr = expr as *const Expr;
+                let depth = self.resolutions.get(&expr_ptr);
+                match depth {
+                    None => panic!("unresolved this"),
+                    Some(depth) => self.environment.get_at(name, *depth),
+                }
+            }
             Expr::Assign { name, value } => {
                 let name = &name.lexeme;
                 let right = self.priv_eval(line, value)?;

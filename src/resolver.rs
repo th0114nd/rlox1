@@ -1,4 +1,5 @@
 use crate::models::Expr;
+use crate::models::FunDecl;
 use crate::models::Stmt;
 use crate::models::StmtList;
 use std::collections::HashMap;
@@ -21,6 +22,12 @@ pub struct Resolver {
     resolutions: HashMap<*const Expr, usize>,
     errors: Vec<ResolverError>,
     scopes: Vec<HashMap<CompactString, bool>>,
+}
+
+#[derive(Debug, Clone, Copy)]
+enum FuncType {
+    Function,
+    Method,
 }
 
 impl Resolver {
@@ -89,8 +96,25 @@ impl Resolver {
         }
     }
 
+    fn resolve_function(&mut self, _func_type: FuncType, fun_decl: &FunDecl) {
+        let FunDecl {
+            name,
+            parameters,
+            body,
+            ..
+        } = fun_decl;
+        self.declare(name);
+        self.define(name);
+        self.begin_scope();
+        for parameter in parameters {
+            self.declare(parameter);
+            self.define(parameter);
+        }
+        self.resolve_stmts(body);
+        self.end_scope();
+    }
+
     fn resolve_stmt(&mut self, stmt: &Stmt) {
-        use crate::models::FunDecl;
         use Stmt::*;
         match stmt {
             Expr(_, expr) => self.resolve_expr(expr),
@@ -102,26 +126,17 @@ impl Resolver {
                 }
                 self.define(token);
             }
-            FunDecl(FunDecl {
-                name,
-                parameters,
-                body,
-                ..
-            }) => {
+            FunDecl(fun_decl) => self.resolve_function(FuncType::Function, fun_decl),
+            ClassDecl { name, methods, .. } => {
                 self.declare(name);
                 self.define(name);
                 self.begin_scope();
-                for parameter in parameters {
-                    self.declare(parameter);
-                    self.define(parameter);
+                self.scopes.last_mut().unwrap().insert("this".into(), true);
+
+                for method in methods {
+                    self.resolve_function(FuncType::Method, method);
                 }
-                self.resolve_stmts(body);
                 self.end_scope();
-            }
-            ClassDecl { name, .. } => {
-                self.declare(name);
-                self.define(name);
-                // TODO: resolve methods
             }
             Block(stmts) => {
                 self.begin_scope();
@@ -153,6 +168,7 @@ impl Resolver {
         match expr {
             Literal(_) => {}
             Variable(token) => self.resolve_local(expr, token),
+            This(token) => self.resolve_local(expr, token),
             Assign { name, value } => {
                 self.resolve_expr(value);
                 self.resolve_local(expr, name)

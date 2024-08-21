@@ -5,6 +5,7 @@ use crate::error::RuntimeError;
 use crate::interpreter::Interpreter;
 use crate::models::Stmt;
 use crate::models::Value;
+use std::collections::HashMap;
 use std::io::Write;
 use std::mem;
 use std::rc::Rc;
@@ -31,19 +32,29 @@ impl Interpreter {
             }
             Stmt::FunDecl(fun_decl) => {
                 let f = LoxFunction {
-                    definition: fun_decl.clone(),
+                    definition: fun_decl.clone().into(),
                     closure: self.environment.clone(),
                 };
                 let callable = Value::Callable(Rc::new(f));
                 self.environment.define(&fun_decl.name.lexeme, callable);
                 Ok(())
             }
-            Stmt::ClassDecl { name, .. } => {
+            Stmt::ClassDecl { name, methods, .. } => {
+                let mut method_table = HashMap::default();
+                for method in methods {
+                    let m = LoxFunction {
+                        definition: method.clone().into(),
+                        closure: self.environment.clone(),
+                    };
+                    method_table.insert(method.name.lexeme.to_owned(), m);
+                }
                 let class = LoxClass {
                     name: name.lexeme.clone(),
+                    methods: method_table,
                 };
                 let object = Value::Object(Rc::new(class));
                 self.environment.define(&name.lexeme, object);
+
                 Ok(())
             }
             Stmt::Block(stmts) => {
@@ -325,6 +336,60 @@ print b.s.field;
 
         let got = str_eval(input)?;
         assert_eq!(got, "317\n317\n");
+        Ok(())
+    }
+
+    #[test]
+    fn test_method_simple() -> LoxResult<()> {
+        let input = r#"
+class Bacon {
+  eat() {
+    print "Crunch crunch crunch!";
+  }
+}
+
+Bacon().eat();
+"#;
+        let got = str_eval(input)?;
+        assert_eq!(got, "Crunch crunch crunch!\n");
+        Ok(())
+    }
+
+    #[test]
+    fn test_this() -> LoxResult<()> {
+        let input = r#"
+class Egotist {
+  speak() {
+    print this;
+  }
+}
+
+var method = Egotist().speak;
+method();
+"#;
+        let got = str_eval(input)?;
+        assert_eq!(got, "Egotist instance\n");
+        Ok(())
+    }
+
+    #[test]
+    fn test_method_calls() -> LoxResult<()> {
+        let input = r#"
+class Person {
+  sayName() {
+    print this.name;
+  }
+}
+
+var jane = Person();
+jane.name = "Jane";
+
+jane.sayName();
+var method = jane.sayName;
+method(); //
+"#;
+        let got = str_eval(input)?;
+        assert_eq!(got, "Jane\nJane\n");
         Ok(())
     }
 }
