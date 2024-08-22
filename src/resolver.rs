@@ -2,6 +2,7 @@ use crate::models::Expr;
 use crate::models::FunDecl;
 use crate::models::Stmt;
 use crate::models::StmtList;
+use crate::models::Value;
 use std::collections::HashMap;
 
 use crate::models::Token;
@@ -136,19 +137,18 @@ impl Resolver {
     }
 
     fn resolve_stmt(&mut self, stmt: &Stmt) {
-        use Stmt::*;
         match stmt {
-            Expr(_, expr) => self.resolve_expr(expr),
-            Print(_, expr) => self.resolve_expr(expr),
-            VarDecl(_, token, expr) => {
+            Stmt::Expr(_, expr) => self.resolve_expr(expr),
+            Stmt::Print(_, expr) => self.resolve_expr(expr),
+            Stmt::VarDecl(_, token, expr) => {
                 self.declare(token);
                 if let Some(expr) = expr {
                     self.resolve_expr(expr);
                 }
                 self.define(token);
             }
-            FunDecl(fun_decl) => self.resolve_function(FuncType::Function, fun_decl),
-            ClassDecl { name, methods, .. } => {
+            Stmt::FunDecl(fun_decl) => self.resolve_function(FuncType::Function, fun_decl),
+            Stmt::ClassDecl { name, methods, .. } => {
                 let enclosing_class = self.class_type;
                 self.class_type = ClassType::Class;
                 self.declare(name);
@@ -167,12 +167,12 @@ impl Resolver {
                 self.end_scope();
                 self.class_type = enclosing_class;
             }
-            Block(stmts) => {
+            Stmt::Block(stmts) => {
                 self.begin_scope();
                 self.resolve_stmts(stmts);
                 self.end_scope();
             }
-            IfThenElse {
+            Stmt::IfThenElse {
                 line: _,
                 if_expr,
                 then_stmt,
@@ -184,13 +184,14 @@ impl Resolver {
                     self.resolve_stmt(else_stmt);
                 }
             }
-            While(_, expr, stmt) => {
+            Stmt::While(_, expr, stmt) => {
                 self.resolve_expr(expr);
                 self.resolve_stmt(stmt);
             }
-            Return(_, expr) => {
-                if matches!(self.func_type, FuncType::None | FuncType::Initializer) {
-                    //if self.func_type == FuncType::None || {
+            Stmt::Return(_, expr) => {
+                if !matches!(expr, Expr::Literal(Value::VNil))
+                    && matches!(self.func_type, FuncType::None | FuncType::Initializer)
+                {
                     self.errors
                         .push(ResolverError::NoFuncReturn(format!("{expr}")));
                 }
