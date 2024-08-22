@@ -8,6 +8,7 @@ pub enum Expr {
     Literal(value::Value),
     Variable(Token),
     This(Token),
+    Super(Token, Token),
     Assign {
         name: Token,
         value: Box<Expr>,
@@ -47,6 +48,7 @@ impl fmt::Display for Expr {
         match &self {
             Expr::Literal(value) => write!(f, "{}", value),
             Expr::This(_) => write!(f, "this"),
+            Expr::Super(_, method) => write!(f, "super.{}", method.lexeme),
             Expr::Variable(token) => write!(f, "v#{}", token.lexeme),
             Expr::Assign { name, value } => write!(f, "(= v#{} {value})", name.lexeme),
             Expr::Grouping(gr) => write!(f, "(group {})", gr),

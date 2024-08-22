@@ -6,6 +6,7 @@ use crate::interpreter::Interpreter;
 use crate::models::Expr;
 use crate::models::TokenType::*;
 use crate::models::Value;
+use std::rc::Rc;
 
 impl Interpreter {
     pub fn eval_expr(&mut self, line: usize, expr: &Expr) -> Result<Value, RuntimeError> {
@@ -33,6 +34,24 @@ impl Interpreter {
                     None => panic!("unresolved this"),
                     Some(depth) => self.environment.get_at(name, *depth),
                 }
+            }
+            Expr::Super(token, method) => {
+                let name = &token.lexeme;
+                let expr_ptr = expr as *const Expr;
+                let depth = *self.resolutions.get(&expr_ptr).expect("unresolved super");
+                let parent = match self.environment.get_at(name, depth)? {
+                    Value::Class(lc) => lc,
+                    _ => panic!("no super on non class"),
+                };
+                let object = match self.environment.get_at("this", depth - 1)? {
+                    Value::Object(inst) => inst,
+                    obj => panic!("no class defined here: {obj}"),
+                };
+
+                let method = parent
+                    .find_method(&method.lexeme)
+                    .expect("unresolved super method");
+                Ok(Value::Callable(Rc::new(method.bind(object))))
             }
             Expr::Assign { name, value } => {
                 let name = &name.lexeme;
@@ -132,8 +151,6 @@ impl Interpreter {
                     Value::Object(obj) => obj.get(name),
                     _ => panic!("invalid property access"),
                 }
-                //let value = lhs.get(name);
-                //panic!("expr_eval: {expr}");
             }
             Expr::Set {
                 object,

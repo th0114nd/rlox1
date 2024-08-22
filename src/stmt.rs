@@ -30,6 +30,7 @@ pub enum Stmt {
     ClassDecl {
         line: usize,
         name: Token,
+        parent: Option<Expr>,
         methods: Vec<FunDecl>,
     },
 }
@@ -88,9 +89,13 @@ impl fmt::Display for Stmt {
             Stmt::ClassDecl {
                 line: _,
                 name,
+                parent,
                 methods,
             } => {
                 write!(f, "(defclass {} ", name.lexeme)?;
+                if let Some(p) = parent {
+                    write!(f, "(from {p}) ")?;
+                }
                 for method in methods {
                     write!(f, "{method} ")?;
                 }

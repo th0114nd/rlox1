@@ -40,13 +40,37 @@ impl Interpreter {
                 self.environment.define(&fun_decl.name.lexeme, callable);
                 Ok(())
             }
-            Stmt::ClassDecl { name, methods, .. } => {
+            Stmt::ClassDecl {
+                name,
+                methods,
+                parent,
+                line,
+            } => {
+                let parent_class = match parent {
+                    None => None,
+                    Some(p) => {
+                        let maybe_class = self.eval_expr(*line, p)?;
+                        match maybe_class {
+                            Value::Class(lc) => Some(lc),
+                            _ => panic!("not a class"),
+                        }
+                    }
+                };
+                let environment = match parent_class {
+                    None => self.environment.clone(),
+                    Some(ref lc) => {
+                        let environment = self.environment.push();
+                        environment.define("super", Value::Class(lc.clone()));
+                        environment
+                    }
+                };
+
                 let mut method_table = HashMap::default();
                 for method in methods {
                     let name = method.name.lexeme.to_owned();
                     let m = LoxFunction {
                         definition: method.clone().into(),
-                        closure: self.environment.clone(),
+                        closure: environment.clone(),
                         is_init: name == "init",
                     };
                     method_table.insert(name, m);
@@ -54,8 +78,9 @@ impl Interpreter {
                 let class = LoxClass {
                     name: name.lexeme.clone(),
                     methods: method_table,
+                    parent: parent_class,
                 };
-                let object = Value::Class(class);
+                let object = Value::Class(class.into());
                 self.environment.define(&name.lexeme, object);
 
                 Ok(())
@@ -435,6 +460,78 @@ class Foo {
             format!("{got}"),
             "return outside of function: something else"
         );
+        Ok(())
+    }
+
+    #[test]
+    fn test_inherits() -> LoxResult<()> {
+        let input = r#"
+class Doughnut {
+  cook() {
+    print "Fry until golden brown.";
+  }
+}
+
+class BostonCream < Doughnut {}
+
+BostonCream().cook();
+"#;
+        let got = str_eval(input)?;
+        assert_eq!(got, "Fry until golden brown.\n");
+        Ok(())
+    }
+
+    #[test]
+    fn test_super() -> LoxResult<()> {
+        let input = r#"
+class Doughnut {
+  cook() {
+    print "Fry until golden brown.";
+  }
+}
+
+class BostonCream < Doughnut {
+  cook() {
+    super.cook();
+    print "Pipe full of custard and coat with chocolate.";
+  }
+}
+
+BostonCream().cook();
+"#;
+        let got = str_eval(input)?;
+        assert_eq!(
+            got,
+            "Fry until golden brown.\nPipe full of custard and coat with chocolate.\n"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_super_stack() -> LoxResult<()> {
+        let input = r#"
+class A {
+  method() {
+    print "A method";
+  }
+}
+
+class B < A {
+  method() {
+    print "B method";
+  }
+
+  test() {
+    super.method();
+  }
+}
+
+class C < B {}
+
+C().test();
+"#;
+        let got = str_eval(input)?;
+        assert_eq!(got, "A method\n");
         Ok(())
     }
 }

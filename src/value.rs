@@ -11,8 +11,6 @@ use crate::token::TokenType;
 
 type OpOutput = Result<Value, RuntimeError>;
 
-//pub trait AnyClass: fmt::Display + fmt::Debug {}
-
 #[derive(Debug, Clone, Default)]
 pub enum Value {
     #[default]
@@ -21,8 +19,7 @@ pub enum Value {
     VNumber(f64),
     VString(CompactString),
     Callable(Rc<dyn LoxCallable>),
-    //Object(Rc<dyn AnyClass>),
-    Class(LoxClass),
+    Class(Rc<LoxClass>),
     Object(Rc<LoxInstance>),
 }
 

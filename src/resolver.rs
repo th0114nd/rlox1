@@ -148,11 +148,31 @@ impl Resolver {
                 self.define(token);
             }
             Stmt::FunDecl(fun_decl) => self.resolve_function(FuncType::Function, fun_decl),
-            Stmt::ClassDecl { name, methods, .. } => {
+            Stmt::ClassDecl {
+                name,
+                methods,
+                parent,
+                ..
+            } => {
                 let enclosing_class = self.class_type;
                 self.class_type = ClassType::Class;
                 self.declare(name);
                 self.define(name);
+                if let Some(p) = parent {
+                    if let Expr::Variable(var) = p {
+                        if name.lexeme == var.lexeme {
+                            // I should have used anyhow
+                            panic!("recursive class def");
+                        }
+                    } else {
+                        panic!("non var parent class");
+                    }
+                    self.resolve_expr(p);
+                }
+                if parent.is_some() {
+                    self.begin_scope();
+                    self.scopes.last_mut().unwrap().insert("super".into(), true);
+                }
                 self.begin_scope();
                 self.scopes.last_mut().unwrap().insert("this".into(), true);
 
@@ -165,6 +185,9 @@ impl Resolver {
                     self.resolve_function(func_type, method);
                 }
                 self.end_scope();
+                if parent.is_some() {
+                    self.end_scope();
+                }
                 self.class_type = enclosing_class;
             }
             Stmt::Block(stmts) => {
@@ -210,6 +233,9 @@ impl Resolver {
                     self.errors.push(ResolverError::NoClassThis(token.clone()))
                 }
                 self.resolve_local(expr, token);
+            }
+            Super(_, keyword) => {
+                self.resolve_local(expr, keyword);
             }
             Assign { name, value } => {
                 self.resolve_expr(value);

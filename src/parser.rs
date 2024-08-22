@@ -124,9 +124,14 @@ impl<'long> Parser<'long> {
         self.consume(Identifier, "Expected identifier in declaration")?;
         let name = self.previous();
         let line = self.current_line();
+        let parent = if self.token_match(&[Less]) {
+            self.consume(Identifier, "Expected identifier for parent class")?;
+            Some(Expr::Variable(self.previous()))
+        } else {
+            None
+        };
         self.consume(LeftBrace, "Expected '{' to start class declaration")?;
         let mut methods = vec![];
-        //while !self.token_match(&[RightBrace]) && !self.is_at_end() {
         while !self.check(&RightBrace) && !self.is_at_end() {
             let method = self.fun_declaration()?;
             methods.push(method);
@@ -135,6 +140,7 @@ impl<'long> Parser<'long> {
         Ok(Stmt::ClassDecl {
             line,
             name,
+            parent,
             methods,
         })
     }
@@ -486,6 +492,15 @@ impl<'long> Parser<'long> {
                 self.advance();
                 Ok(Expr::This(self.previous()))
             }
+            Super => {
+                self.advance();
+                let this = self.previous();
+                self.consume(Dot, "Expect '.' after super")?;
+                self.consume(Identifier, "Expecte identifier for super property access")?;
+                let property = self.previous();
+                Ok(Expr::Super(this, property))
+            }
+
             LeftParen => {
                 self.advance();
                 let expr = self.expression()?;

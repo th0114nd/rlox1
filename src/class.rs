@@ -14,6 +14,7 @@ use std::rc::Rc;
 pub struct LoxClass {
     pub name: CompactString,
     pub methods: HashMap<CompactString, LoxFunction>,
+    pub parent: Option<Rc<LoxClass>>,
 }
 
 impl fmt::Display for LoxClass {
@@ -43,8 +44,11 @@ impl LoxCallable for LoxClass {
 }
 
 impl LoxClass {
-    fn find_method(&self, name: &str) -> Option<LoxFunction> {
-        self.methods.get(name).cloned()
+    pub fn find_method(&self, name: &str) -> Option<LoxFunction> {
+        self.methods
+            .get(name)
+            .cloned()
+            .or_else(|| self.parent.as_ref().and_then(|p| p.find_method(name)))
     }
 }
 
