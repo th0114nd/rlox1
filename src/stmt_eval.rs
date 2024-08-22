@@ -534,4 +534,19 @@ C().test();
         assert_eq!(got, "A method\n");
         Ok(())
     }
+
+    #[test]
+    fn no_subclass_super() -> LoxResult<()> {
+        let input = r#"
+    class Eclair {
+  cook() {
+    super.cook();
+    print "Pipe full of crème pâtissière.";
+  }
+}
+"#;
+        let got = str_eval(input).expect_err("should not work");
+        assert_eq!(format!("{got}"), "super outside of subclass");
+        Ok(())
+    }
 }

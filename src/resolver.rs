@@ -22,6 +22,9 @@ pub enum ResolverError {
 
     #[error("this outside of class: {0}")]
     NoClassThis(Token),
+
+    #[error("super outside of subclass")]
+    NoSubclassSuper,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
@@ -38,6 +41,7 @@ enum ClassType {
     #[default]
     None,
     Class,
+    Subclass,
 }
 
 #[derive(Debug, Default)]
@@ -167,6 +171,7 @@ impl Resolver {
                     } else {
                         panic!("non var parent class");
                     }
+                    self.class_type = ClassType::Subclass;
                     self.resolve_expr(p);
                 }
                 if parent.is_some() {
@@ -235,6 +240,9 @@ impl Resolver {
                 self.resolve_local(expr, token);
             }
             Super(_, keyword) => {
+                if self.class_type != ClassType::Subclass {
+                    self.errors.push(ResolverError::NoSubclassSuper);
+                }
                 self.resolve_local(expr, keyword);
             }
             Assign { name, value } => {
