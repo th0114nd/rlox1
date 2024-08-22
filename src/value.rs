@@ -51,8 +51,8 @@ impl TryFrom<Value> for f64 {
         } else {
             Err(RuntimeError::TypeMismatch {
                 line: "TODO".into(),
-                lhs: value,
-                rhs: VNumber(1197.9),
+                lhs: value.into(),
+                rhs: VNumber(1197.9).into(),
             })
         }
     }
@@ -80,8 +80,8 @@ impl std::ops::Add for Value {
             (VString(lhs), VString(rhs)) => Ok(VString(lhs + &rhs)),
             (lhs, rhs) => Err(RuntimeError::TypeMismatch {
                 line: "TODO".into(),
-                lhs,
-                rhs,
+                lhs: lhs.into(),
+                rhs: rhs.into(),
             }),
         }
     }

@@ -42,8 +42,8 @@ pub enum RuntimeError {
     #[error("[line {line}] Error: type mismatch: {lhs} vs {rhs}")]
     TypeMismatch {
         line: CompactString,
-        lhs: Value,
-        rhs: Value,
+        lhs: Box<Value>,
+        rhs: Box<Value>,
     },
 
     #[error("[line {line}] Error: division by zero")]
