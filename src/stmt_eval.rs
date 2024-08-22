@@ -34,6 +34,7 @@ impl Interpreter {
                 let f = LoxFunction {
                     definition: fun_decl.clone().into(),
                     closure: self.environment.clone(),
+                    is_init: false,
                 };
                 let callable = Value::Callable(Rc::new(f));
                 self.environment.define(&fun_decl.name.lexeme, callable);
@@ -42,11 +43,13 @@ impl Interpreter {
             Stmt::ClassDecl { name, methods, .. } => {
                 let mut method_table = HashMap::default();
                 for method in methods {
+                    let name = method.name.lexeme.to_owned();
                     let m = LoxFunction {
                         definition: method.clone().into(),
                         closure: self.environment.clone(),
+                        is_init: name == "init",
                     };
-                    method_table.insert(method.name.lexeme.to_owned(), m);
+                    method_table.insert(name, m);
                 }
                 let class = LoxClass {
                     name: name.lexeme.clone(),
@@ -398,6 +401,40 @@ method(); //
         let input = "print this;";
         let got = str_eval(input).expect_err("should fail");
         assert_eq!(format!("{got}"), "this outside of class: This \"this\"");
+        Ok(())
+    }
+
+    #[test]
+    fn test_init() -> LoxResult<()> {
+        let input = r#"
+class Foo {
+  init() {
+    print this;
+  }
+}
+
+var foo = Foo();
+print foo.init();
+"#;
+        let got = str_eval(input)?;
+        assert_eq!(got, "Foo instance\nFoo instance\nFoo instance\n");
+        Ok(())
+    }
+
+    #[test]
+    fn test_init_return() -> LoxResult<()> {
+        let input = r#"
+class Foo {
+  init() {
+    return "something else";
+  }
+}
+"#;
+        let got = str_eval(input).expect_err("should fail");
+        assert_eq!(
+            format!("{got}"),
+            "return outside of function: something else"
+        );
         Ok(())
     }
 }

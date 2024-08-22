@@ -28,6 +28,7 @@ enum FuncType {
     #[default]
     None,
     Function,
+    Initializer,
     Method,
 }
 
@@ -156,7 +157,12 @@ impl Resolver {
                 self.scopes.last_mut().unwrap().insert("this".into(), true);
 
                 for method in methods {
-                    self.resolve_function(FuncType::Method, method);
+                    let func_type = if method.name.lexeme == "init" {
+                        FuncType::Initializer
+                    } else {
+                        FuncType::Method
+                    };
+                    self.resolve_function(func_type, method);
                 }
                 self.end_scope();
                 self.class_type = enclosing_class;
@@ -183,7 +189,8 @@ impl Resolver {
                 self.resolve_stmt(stmt);
             }
             Return(_, expr) => {
-                if self.func_type == FuncType::None {
+                if matches!(self.func_type, FuncType::None | FuncType::Initializer) {
+                    //if self.func_type == FuncType::None || {
                     self.errors
                         .push(ResolverError::NoFuncReturn(format!("{expr}")));
                 }

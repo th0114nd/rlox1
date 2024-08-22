@@ -48,6 +48,7 @@ use crate::models::FunDecl;
 pub struct LoxFunction {
     pub definition: Rc<FunDecl>,
     pub closure: Rc<Environment>,
+    pub is_init: bool,
 }
 
 impl fmt::Display for LoxFunction {
@@ -62,17 +63,29 @@ impl LoxCallable for LoxFunction {
     }
 
     fn call(&self, interpreter: &mut Interpreter, args: Vec<Value>) -> Result<Value, RuntimeError> {
-        let mut alt_environment = self.closure.push();
-        mem::swap(&mut alt_environment, &mut interpreter.environment);
+        let mut closure = self.closure.push();
+        mem::swap(&mut closure, &mut interpreter.environment);
         for (param, arg) in self.definition.parameters.iter().zip(args) {
             interpreter.environment.define(&param.lexeme, arg);
         }
 
         let result = interpreter.interpret(&self.definition.body);
-        interpreter.environment = mem::take(&mut alt_environment);
+        mem::swap(&mut closure, &mut interpreter.environment);
         match result {
-            Ok(()) => Ok(Value::VNil),
-            Err(RuntimeError::Return { value, .. }) => Ok(value),
+            Ok(()) => {
+                if self.is_init {
+                    closure.get_at("this", 0)
+                } else {
+                    Ok(Value::VNil)
+                }
+            }
+            Err(RuntimeError::Return { value, .. }) => {
+                if self.is_init {
+                    closure.get_at("this", 0)
+                } else {
+                    Ok(value)
+                }
+            }
             Err(err) => Err(err),
         }
     }
@@ -85,6 +98,7 @@ impl LoxFunction {
         closure.define("this", Value::Object(Rc::new(instance)));
         LoxFunction {
             definition: self.definition.clone(),
+            is_init: self.is_init,
             closure,
         }
     }

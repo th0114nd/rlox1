@@ -31,21 +31,22 @@ impl fmt::Display for LoxClass {
 
 impl LoxCallable for LoxClass {
     fn arity(&self) -> usize {
-        // TODO: what is this actually?
-        0
+        match self.find_method("init") {
+            None => 0,
+            Some(f) => f.arity(),
+        }
     }
 
-    fn call(
-        &self,
-        _interpreter: &mut Interpreter,
-        _args: Vec<Value>,
-    ) -> Result<Value, RuntimeError> {
-        let value = LoxInstance {
+    fn call(&self, interpreter: &mut Interpreter, args: Vec<Value>) -> Result<Value, RuntimeError> {
+        let instance = Rc::new(LoxInstance {
             class: self.clone(),
             fields: Default::default(),
-        };
+        });
+        if let Some(init) = self.find_method("init") {
+            init.bind(instance.clone()).call(interpreter, args)?;
+        }
         // I know I know
-        Ok(Value::Object(Rc::new(Rc::new(value))))
+        Ok(Value::Object(Rc::new(instance)))
     }
 }
 
