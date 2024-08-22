@@ -12,10 +12,10 @@ use std::rc::Rc;
 
 // Is every object callable? or just classes?
 // I guess we could always panic?
-pub trait AnyClass: fmt::Display + fmt::Debug + LoxCallable {
-    fn get(&self, name: &Token) -> Result<Value, RuntimeError>;
-    fn set(&self, name: &Token, value: Value);
-}
+//pub trait AnyClass: fmt::Display + fmt::Debug + LoxCallable {
+//    fn get(&self, name: &Token) -> Result<Value, RuntimeError>;
+//    fn set(&self, name: &Token, value: Value);
+//}
 
 #[derive(Debug, Clone)]
 pub struct LoxClass {
@@ -46,18 +46,18 @@ impl LoxCallable for LoxClass {
             init.bind(instance.clone()).call(interpreter, args)?;
         }
         // I know I know
-        Ok(Value::Object(Rc::new(instance)))
+        Ok(Value::Object(instance))
     }
 }
 
-impl AnyClass for LoxClass {
-    fn get(&self, name: &Token) -> Result<Value, RuntimeError> {
-        panic!("No get on class {self}.{}", name.lexeme);
-    }
-    fn set(&self, name: &Token, value: Value) {
-        panic!("No set on class {self}.{} = {value}", name.lexeme);
-    }
-}
+//impl AnyClass for LoxClass {
+//    fn get(&self, name: &Token) -> Result<Value, RuntimeError> {
+//        panic!("No get on class {self}.{}", name.lexeme);
+//    }
+//    fn set(&self, name: &Token, value: Value) {
+//        panic!("No set on class {self}.{} = {value}", name.lexeme);
+//    }
+//}
 
 impl LoxClass {
     fn find_method(&self, name: &str) -> Option<LoxFunction> {
@@ -79,21 +79,26 @@ impl fmt::Display for LoxInstance {
     }
 }
 
-impl LoxCallable for Rc<LoxInstance> {
-    fn arity(&self) -> usize {
-        0
-    }
-
-    fn call(
-        &self,
-        _interpreter: &mut Interpreter,
-        _args: Vec<Value>,
-    ) -> Result<Value, RuntimeError> {
-        panic!("cannot call a class instance")
-    }
+//impl LoxCallable for Rc<LoxInstance> {
+//    fn arity(&self) -> usize {
+//        0
+//    }
+//
+//    fn call(
+//        &self,
+//        _interpreter: &mut Interpreter,
+//        _args: Vec<Value>,
+//    ) -> Result<Value, RuntimeError> {
+//        panic!("cannot call a class instance")
+//    }
+//}
+//
+pub trait GetSet {
+    fn get(&self, name: &Token) -> Result<Value, RuntimeError>;
+    fn set(&self, name: &Token, value: Value);
 }
 
-impl AnyClass for Rc<LoxInstance> {
+impl GetSet for Rc<LoxInstance> {
     fn get(&self, name: &Token) -> Result<Value, RuntimeError> {
         let borrow = self.fields.borrow();
         if let Some(value) = borrow.get(&name.lexeme) {

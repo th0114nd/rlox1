@@ -95,7 +95,7 @@ impl LoxFunction {
     pub fn bind(&self, instance: Rc<LoxInstance>) -> LoxFunction {
         let closure = self.closure.push();
 
-        closure.define("this", Value::Object(Rc::new(instance)));
+        closure.define("this", Value::Object(instance));
         LoxFunction {
             definition: self.definition.clone(),
             is_init: self.is_init,

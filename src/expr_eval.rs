@@ -1,3 +1,5 @@
+use crate::callable::LoxCallable;
+use crate::class::GetSet;
 use crate::environment::Env;
 use crate::error::RuntimeError;
 use crate::interpreter::Interpreter;
@@ -107,8 +109,8 @@ impl Interpreter {
                         }
                         Ok(callee.call(self, arguments)?)
                     }
-                    Value::Object(object) => {
-                        let arity = object.arity();
+                    Value::Class(class) => {
+                        let arity = class.arity();
                         if arity != arguments.len() {
                             return Err(RuntimeError::ArityMismatch {
                                 line: "TODO".into(),
@@ -116,7 +118,7 @@ impl Interpreter {
                                 got: arguments.len(),
                             })?;
                         }
-                        Ok(object.call(self, arguments)?)
+                        Ok(class.call(self, arguments)?)
                     }
                     _ => Err(RuntimeError::NonCallableCalled {
                         line: "TODO".into(),

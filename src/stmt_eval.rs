@@ -55,7 +55,7 @@ impl Interpreter {
                     name: name.lexeme.clone(),
                     methods: method_table,
                 };
-                let object = Value::Object(Rc::new(class));
+                let object = Value::Class(class);
                 self.environment.define(&name.lexeme, object);
 
                 Ok(())

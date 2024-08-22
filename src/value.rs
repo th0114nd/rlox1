@@ -1,5 +1,6 @@
 use crate::callable::LoxCallable;
-use crate::class::AnyClass;
+use crate::class::LoxClass;
+use crate::class::LoxInstance;
 use crate::error::RuntimeError;
 use compact_str::CompactString;
 use std::convert::TryFrom;
@@ -20,7 +21,9 @@ pub enum Value {
     VNumber(f64),
     VString(CompactString),
     Callable(Rc<dyn LoxCallable>),
-    Object(Rc<dyn AnyClass>),
+    //Object(Rc<dyn AnyClass>),
+    Class(LoxClass),
+    Object(Rc<LoxInstance>),
 }
 
 use Value::*;
@@ -34,6 +37,7 @@ impl fmt::Display for Value {
             VString(s) => write!(f, "{s}"),
             Callable(func) => write!(f, "{func}"),
             Object(x) => write!(f, "{x}"),
+            Class(c) => write!(f, "{c}"),
         }
     }
 }
